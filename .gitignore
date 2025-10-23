@@ -1,0 +1,95 @@
+# ======================
+# 通用
+# ======================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.bak
+*.iml
+.idea/
+.vscode/
+
+# ======================
+# Node/前端
+# ======================
+node_modules/
+dist/
+build/
+.npm/
+.yarn/
+.pnpm-store/
+coverage/
+*.local
+
+# React / Vue build outputs
+*.cache/
+*.parcel-cache/
+.next/
+.nuxt/
+out/
+.svelte-kit/
+.storybook/
+.temp/
+.cache-loader/
+
+# ======================
+# Java/后端
+# ======================
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring Boot
+!gradle/wrapper/gradle-wrapper.jar
+spring.log
+
+# ======================
+# Maven / Gradle
+# ======================
+.mvn/
+.settings/
+.project
+.classpath
+.gradle/
+!gradle-wrapper.jar
+
+# ======================
+# IDE/编辑器
+# ======================
+.idea/
+*.iws
+*.ipr
+*.iml
+*.class
+
+# Eclipse
+*.prefs
+.metadata/
+bin/
+tmp/
+
+# ======================
+# OS
+# ======================
+ehthumbs.db
+desktop.ini
+
+# ======================
+# 环境配置（本地）
+# ======================
+.env
+.env.local
+.env.*.local
+
+# ======================
+# 测试/临时
+# ======================
+coverage/
+__pycache__/
+*.pid

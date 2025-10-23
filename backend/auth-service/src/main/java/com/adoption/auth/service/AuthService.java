@@ -1,0 +1,123 @@
+package com.adoption.auth.service;
+
+import com.adoption.auth.model.RegisterDTO;
+import com.adoption.auth.model.UserAccount;
+import com.adoption.auth.repository.UserMapper;
+import com.adoption.auth.repository.UserRoleMapper;
+import com.adoption.common.api.ApiResponse;
+import com.adoption.common.constant.RoleEnum;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.security.Key;
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Service
+public class AuthService {
+    private final UserMapper userMapper;
+    private final UserRoleMapper roleMapper;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
+    public AuthService(UserMapper userMapper, UserRoleMapper roleMapper) {
+        this.userMapper = userMapper;
+        this.roleMapper = roleMapper;
+    }
+
+    /**
+     * 注册：新用户默认分配 USER 角色
+     */
+    public ApiResponse<String> register(RegisterDTO dto) {
+        // 先查是否存在
+        UserAccount existing = userMapper.findByUsername(dto.getUsername());
+        if (existing != null) {
+            return ApiResponse.error(4001, "用户名已存在");
+        }
+
+        // 构造实体对象
+        UserAccount user = new UserAccount();
+        user.setUsername(dto.getUsername());
+        user.setPasswordHash(encoder.encode(dto.getPassword())); // ✅ 后端做加密
+        user.setEmail(dto.getEmail());
+        user.setPhone(dto.getPhone());
+        user.setStatus("ACTIVE");
+
+        // 插入用户
+        userMapper.insert(user);
+
+        // 默认分配 USER 角色
+        roleMapper.insertUserRole(user.getId(), RoleEnum.USER.name());
+
+        return ApiResponse.success("注册成功");
+    }
+
+
+
+    /**
+     * 登录：返回 JWT 和基本信息
+     */
+    public ApiResponse<Map<String, Object>> login(String username, String password) {
+        UserAccount user = userMapper.findByUsername(username);
+        if (user == null || !encoder.matches(password, user.getPasswordHash())) {
+            return ApiResponse.error(401, "用户名或密码错误");
+        }
+
+        // 查角色
+        List<String> roles = roleMapper.findRolesByUserId(user.getId());
+
+        // 生成 JWT
+        String token = generateToken(user, roles);
+
+        // 返回
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+        result.put("roles", roles);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 分配角色
+     */
+    public ApiResponse<String> assignRole(Long userId, String role) {
+        List<String> roles = roleMapper.findRolesByUserId(userId);
+        if (roles.contains(role)) {
+            return ApiResponse.error(400, "用户已拥有该角色");
+        }
+        roleMapper.insertUserRole(userId, role);
+        return ApiResponse.success("角色分配成功");
+    }
+
+    /**
+     * 查询用户角色
+     */
+    public ApiResponse<List<String>> getUserRoles(Long userId) {
+        List<String> roles = roleMapper.findRolesByUserId(userId);
+        return ApiResponse.success(roles);
+    }
+
+    private String generateToken(UserAccount user, List<String> roles) {
+        Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(user.getId()))
+                .claim("roles", roles)
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(key)
+                .compact();
+    }
+}

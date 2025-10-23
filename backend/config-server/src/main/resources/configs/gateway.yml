@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # 根据 Eureka 服务名自动转发
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0   # 保留 /auth 前缀
+        - id: org-service
+          uri: lb://org-service
+          predicates:
+            - Path=/org/**
+          filters:
+            - StripPrefix=0   # 保留 /org 前缀
+        - id: pet-service
+          uri: lb://pet-service
+          predicates:
+            - Path=/pets/**
+          filters:
+            - StripPrefix=0   # 保留 /pets 前缀

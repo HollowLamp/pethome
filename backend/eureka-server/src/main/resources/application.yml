@@ -1,0 +1,13 @@
+server:
+  port: 8761   # 默认端口
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  client:
+    register-with-eureka: false   # 自己是服务端，不需要注册
+    fetch-registry: false         # 自己是服务端，不需要拉取
+  server:
+    enable-self-preservation: false   # 关闭自我保护（开发环境推荐）
