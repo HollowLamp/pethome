@@ -37,12 +37,6 @@
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
-        <!-- Security（用于 JWT 校验，可选） -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
         <!-- JWT 工具 -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
