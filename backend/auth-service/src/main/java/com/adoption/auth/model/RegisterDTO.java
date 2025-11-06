@@ -5,6 +5,7 @@ public class RegisterDTO {
     private String password;
     private String email;
     private String phone;
+    private String code;
 
     // Getter / Setter
     public String getUsername() {
@@ -30,5 +31,11 @@ public class RegisterDTO {
     }
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+    public String getCode() {
+        return code;
+    }
+    public void setCode(String code) {
+        this.code = code;
     }
 }

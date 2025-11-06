@@ -9,6 +9,7 @@ import com.adoption.common.constant.RoleEnum;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,8 @@ public class AuthService {
     private final UserMapper userMapper;
     private final UserRoleMapper roleMapper;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final StringRedisTemplate stringRedisTemplate;
+    private final MailService mailService;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -28,15 +31,25 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public AuthService(UserMapper userMapper, UserRoleMapper roleMapper) {
+    public AuthService(UserMapper userMapper, UserRoleMapper roleMapper,
+                       StringRedisTemplate stringRedisTemplate, MailService mailService) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.mailService = mailService;
     }
 
     /**
      * 注册：新用户默认分配 USER 角色
      */
     public ApiResponse<String> register(RegisterDTO dto) {
+        // 校验邮箱验证码
+        String key = buildRegisterCodeKey(dto.getEmail());
+        String cachedCode = stringRedisTemplate.opsForValue().get(key);
+        if (cachedCode == null || !cachedCode.equals(dto.getCode())) {
+            return ApiResponse.error(4002, "验证码错误或已过期");
+        }
+
         // 先查是否存在
         UserAccount existing = userMapper.findByUsername(dto.getUsername());
         if (existing != null) {
@@ -56,6 +69,9 @@ public class AuthService {
 
         // 默认分配 USER 角色
         roleMapper.insertUserRole(user.getId(), RoleEnum.USER.name());
+
+        // 注册成功后删除验证码
+        stringRedisTemplate.delete(key);
 
         return ApiResponse.success("注册成功");
     }
@@ -119,5 +135,23 @@ public class AuthService {
                 .setExpiration(expiry)
                 .signWith(key)
                 .compact();
+    }
+
+    // 发送注册验证码
+    public ApiResponse<String> sendRegisterCode(String email) {
+        if (email == null || email.isEmpty()) {
+            return ApiResponse.error(400, "邮箱不能为空");
+        }
+        String code = String.valueOf((int)(Math.random() * 900000) + 100000);
+        String key = buildRegisterCodeKey(email);
+        // 缓存 5 分钟
+        stringRedisTemplate.opsForValue().set(key, code, java.time.Duration.ofMinutes(5));
+        // 发送邮件
+        mailService.sendPlainText(email, "注册验证码", "您的注册验证码为：" + code + "（5分钟内有效）");
+        return ApiResponse.success("验证码已发送");
+    }
+
+    private String buildRegisterCodeKey(String email) {
+        return "auth:register:code:" + email;
     }
 }

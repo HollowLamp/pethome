@@ -4,6 +4,19 @@ server:
 spring:
   application:
     name: auth-service
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 2504384479@qq.com
+    password: yaccyzvelslfebbe
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+        from: 宠物之家
 
 admin:
   username: admin

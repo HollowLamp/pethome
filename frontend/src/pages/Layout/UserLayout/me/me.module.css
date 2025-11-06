@@ -1,0 +1,53 @@
+.meCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  border: 2px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.meCircle:hover {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.meCircle.loggedIn {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.meCircle.loggedIn:hover {
+  background-color: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.loginText {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.meCircle.loggedIn .loginText {
+  display: none;
+}
+
+.userAvatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+

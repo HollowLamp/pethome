@@ -28,6 +28,16 @@ public class AuthController {
     }
 
     /**
+     * 发送注册验证码
+     * POST /auth/register/code { email }
+     */
+    @PostMapping("/register/code")
+    public ApiResponse<String> sendRegisterCode(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        return authService.sendRegisterCode(email);
+    }
+
+    /**
      * 登录接口
      * POST /auth/login
      * 请求参数: username, password
