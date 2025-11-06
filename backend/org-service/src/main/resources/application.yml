@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: org-service
+  config:
+    import: optional:configserver:
+
+server:
+  port: 8082
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
