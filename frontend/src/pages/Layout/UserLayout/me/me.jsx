@@ -1,0 +1,320 @@
+import React, { useState } from "react";
+import {
+  Modal,
+  Form,
+  Input,
+  Button,
+  Dropdown,
+  App as AntdApp,
+  Tabs,
+} from "antd";
+import {
+  UserOutlined,
+  LogoutOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  LockOutlined,
+} from "@ant-design/icons";
+import useAuthStore from "../../../../store/authStore";
+import api from "../../../../api";
+import styles from "./me.module.css";
+
+export default function Me() {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [activeKey, setActiveKey] = useState("login");
+  const [form] = Form.useForm();
+  const [regForm] = Form.useForm();
+  const { isLoggedIn, user, login, logout } = useAuthStore();
+  const { message } = AntdApp.useApp();
+  const [sending, setSending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [timer, setTimer] = useState(null);
+
+  const handleShowLogin = () => {
+    setActiveKey("login");
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLogin = async (values) => {
+    try {
+      const res = await api.auth.loginApi({
+        username: values.username,
+        password: values.password,
+      });
+      if (res?.code === 200 && res?.data) {
+        login({ ...res.data, token: res.data.token });
+        if (res.data.token) {
+          localStorage.setItem("token", res.data.token);
+        }
+        message.success("登录成功");
+        setIsLoginModalOpen(false);
+        form.resetFields();
+      } else {
+        message.error(res?.message || "登录失败");
+      }
+    } catch (error) {
+      message.error(error?.message || "登录失败，请稍后重试");
+    }
+  };
+
+  const handleSendCode = async () => {
+    try {
+      const email = regForm.getFieldValue("email");
+      if (!email) {
+        message.warning("请先填写邮箱");
+        return;
+      }
+      await regForm.validateFields(["email"]);
+      setSending(true);
+      const res = await api.auth.sendRegisterCodeApi(email);
+      if (res?.code === 200) {
+        message.success("验证码已发送，请查收邮箱");
+        // 开始 60s 倒计时
+        setCountdown(60);
+        const t = setInterval(() => {
+          setCountdown((c) => {
+            if (c <= 1) {
+              clearInterval(t);
+              setTimer(null);
+              return 0;
+            }
+            return c - 1;
+          });
+        }, 1000);
+        setTimer(t);
+      } else {
+        message.error(res?.message || "发送失败");
+      }
+    } catch (e) {
+      message.error(e?.message || "发送失败，请稍后重试");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleRegister = async (values) => {
+    try {
+      const res = await api.auth.registerApi({
+        username: values.username,
+        password: values.password,
+        email: values.email,
+        phone: values.phone,
+        code: values.code,
+      });
+      if (res?.code === 200) {
+        message.success("注册成功，请登录");
+        // 切回登录页并预填用户名
+        setActiveKey("login");
+        form.setFieldsValue({ username: values.username });
+        regForm.resetFields();
+      } else {
+        message.error(res?.message || "注册失败");
+      }
+    } catch (error) {
+      message.error(error?.message || "注册失败，请稍后重试");
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    localStorage.removeItem("token");
+    message.success("已退出登录");
+  };
+
+  const getUserDisplay = () => {
+    if (user?.username) {
+      return user.username.charAt(0).toUpperCase();
+    }
+    return "?";
+  };
+
+  const menuItems = [
+    {
+      key: "logout",
+      label: "退出登录",
+      icon: <LogoutOutlined />,
+      onClick: handleLogout,
+    },
+  ];
+
+  const loggedInCircle = (
+    <div
+      className={`${styles.meCircle} ${styles.loggedIn}`}
+      title={user?.username || "用户"}
+    >
+      <div className={styles.userAvatar}>{getUserDisplay()}</div>
+    </div>
+  );
+
+  return (
+    <>
+      {isLoggedIn ? (
+        <Dropdown menu={{ items: menuItems }} placement="bottomRight">
+          {loggedInCircle}
+        </Dropdown>
+      ) : (
+        <div
+          className={styles.meCircle}
+          onClick={handleShowLogin}
+          title="点击登录/注册"
+        >
+          <span className={styles.loginText}>登录</span>
+        </div>
+      )}
+
+      <Modal
+        title={activeKey === "login" ? "登录" : "注册"}
+        open={isLoginModalOpen}
+        onCancel={() => {
+          setIsLoginModalOpen(false);
+          form.resetFields();
+          regForm.resetFields();
+          if (timer) {
+            clearInterval(timer);
+            setTimer(null);
+          }
+          setCountdown(0);
+          setSending(false);
+        }}
+        footer={null}
+        width={420}
+      >
+        <Tabs
+          activeKey={activeKey}
+          onChange={(k) => setActiveKey(k)}
+          items={[
+            {
+              key: "login",
+              label: "登录",
+              children: (
+                <Form
+                  form={form}
+                  name="login"
+                  onFinish={handleLogin}
+                  layout="vertical"
+                  autoComplete="off"
+                >
+                  <Form.Item
+                    label="用户名"
+                    name="username"
+                    rules={[{ required: true, message: "请输入用户名" }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder="请输入用户名"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[{ required: true, message: "请输入密码" }]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined />}
+                      placeholder="请输入密码"
+                    />
+                  </Form.Item>
+
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" block>
+                      登录
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+            {
+              key: "register",
+              label: "注册",
+              children: (
+                <Form
+                  form={regForm}
+                  name="register"
+                  onFinish={handleRegister}
+                  layout="vertical"
+                  autoComplete="off"
+                >
+                  <Form.Item
+                    label="用户名"
+                    name="username"
+                    rules={[{ required: true, message: "请输入用户名" }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder="请输入用户名"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[{ required: true, message: "请输入密码" }]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined />}
+                      placeholder="请输入密码"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="手机号"
+                    name="phone"
+                    rules={[
+                      { required: true, message: "请输入手机号" },
+                      { pattern: /^\d{11}$/, message: "请输入11位手机号" },
+                    ]}
+                  >
+                    <Input
+                      prefix={<PhoneOutlined />}
+                      placeholder="请输入手机号"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="邮箱"
+                    name="email"
+                    rules={[
+                      { required: true, message: "请输入邮箱" },
+                      { type: "email", message: "邮箱格式不正确" },
+                    ]}
+                  >
+                    <Input prefix={<MailOutlined />} placeholder="请输入邮箱" />
+                  </Form.Item>
+
+                  <Form.Item label="验证码" required>
+                    <Input.Group compact>
+                      <Form.Item
+                        name="code"
+                        noStyle
+                        rules={[{ required: true, message: "请输入验证码" }]}
+                      >
+                        <Input
+                          style={{ width: "60%" }}
+                          placeholder="请输入验证码"
+                        />
+                      </Form.Item>
+                      <Button
+                        style={{ width: "40%" }}
+                        onClick={handleSendCode}
+                        disabled={sending || countdown > 0}
+                      >
+                        {countdown > 0 ? `${countdown}s` : "获取验证码"}
+                      </Button>
+                    </Input.Group>
+                  </Form.Item>
+
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" block>
+                      注册
+                    </Button>
+                  </Form.Item>
+                </Form>
+              ),
+            },
+          ]}
+        />
+      </Modal>
+    </>
+  );
+}
