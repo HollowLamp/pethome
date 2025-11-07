@@ -26,3 +26,13 @@ export function assignRoleApi(payload) {
 export function getUserRolesApi(userId) {
   return http.get(`/auth/users/${userId}/roles`);
 }
+
+export function getUserListApi(params) {
+  // params: { page, pageSize }
+  return http.get("/auth/users", { params });
+}
+
+export function removeRoleApi(payload) {
+  // payload: { userId, role }
+  return http.delete("/auth/roles/remove", { data: payload });
+}
