@@ -7,6 +7,7 @@ import {
   Dropdown,
   App as AntdApp,
   Tabs,
+  Segmented,
 } from "antd";
 import {
   UserOutlined,
@@ -15,6 +16,7 @@ import {
   PhoneOutlined,
   LockOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router";
 import useAuthStore from "../../../../store/authStore";
 import api from "../../../../api";
 import styles from "./me.module.css";
@@ -22,10 +24,12 @@ import styles from "./me.module.css";
 export default function Me() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeKey, setActiveKey] = useState("login");
+  const [loginType, setLoginType] = useState("client"); // "client" 或 "business"
   const [form] = Form.useForm();
   const [regForm] = Form.useForm();
   const { isLoggedIn, user, login, logout } = useAuthStore();
   const { message } = AntdApp.useApp();
+  const navigate = useNavigate();
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [timer, setTimer] = useState(null);
@@ -42,13 +46,58 @@ export default function Me() {
         password: values.password,
       });
       if (res?.code === 200 && res?.data) {
-        login({ ...res.data, token: res.data.token });
-        if (res.data.token) {
-          localStorage.setItem("token", res.data.token);
+        const userData = res.data;
+        const roles = userData.roles || [];
+
+        // 保存用户信息
+        login({ ...userData, token: userData.token });
+        if (userData.token) {
+          localStorage.setItem("token", userData.token);
         }
+
         message.success("登录成功");
         setIsLoginModalOpen(false);
         form.resetFields();
+
+        // 根据登录类型和角色进行跳转
+        if (loginType === "business") {
+          // B端登录：检查是否有B端角色
+          const businessRoles = [
+            "ADMIN",
+            "AUDITOR",
+            "CS",
+            "ORG_ADMIN",
+            "ORG_STAFF",
+          ];
+          const hasBusinessRole = roles.some((role) =>
+            businessRoles.includes(role)
+          );
+
+          if (hasBusinessRole) {
+            navigate("/admin/dashboard");
+          } else {
+            message.warning("该账号没有B端权限，将以C端身份登录");
+            // 继续留在C端页面
+          }
+        } else {
+          // C端登录：如果只有B端角色，提示用户
+          const businessRoles = [
+            "ADMIN",
+            "AUDITOR",
+            "CS",
+            "ORG_ADMIN",
+            "ORG_STAFF",
+          ];
+          const onlyBusinessRoles =
+            roles.length > 0 &&
+            roles.every((role) => businessRoles.includes(role)) &&
+            !roles.includes("USER");
+
+          if (onlyBusinessRoles) {
+            message.warning("该账号为B端账号，请选择B端登录");
+          }
+          // C端用户继续留在当前页面
+        }
       } else {
         message.error(res?.message || "登录失败");
       }
@@ -169,6 +218,7 @@ export default function Me() {
           setIsLoginModalOpen(false);
           form.resetFields();
           regForm.resetFields();
+          setLoginType("client");
           if (timer) {
             clearInterval(timer);
             setTimer(null);
@@ -194,6 +244,18 @@ export default function Me() {
                   layout="vertical"
                   autoComplete="off"
                 >
+                  <Form.Item label="登录身份">
+                    <Segmented
+                      options={[
+                        { label: "C端用户", value: "client" },
+                        { label: "B端管理", value: "business" },
+                      ]}
+                      value={loginType}
+                      onChange={setLoginType}
+                      block
+                    />
+                  </Form.Item>
+
                   <Form.Item
                     label="用户名"
                     name="username"

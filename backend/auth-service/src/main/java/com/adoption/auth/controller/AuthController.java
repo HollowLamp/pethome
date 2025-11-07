@@ -76,4 +76,33 @@ public class AuthController {
     public ApiResponse<List<String>> getUserRoles(@PathVariable("id") Long userId) {
         return authService.getUserRoles(userId);
     }
+
+    /**
+     * 查询用户列表（分页）
+     * GET /auth/users?page=1&pageSize=10
+     * 说明：仅超级管理员可访问
+     */
+    @GetMapping("/users")
+    public ApiResponse<Map<String, Object>> getUserList(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        return authService.getUserList(page, pageSize);
+    }
+
+    /**
+     * 删除用户角色
+     * DELETE /auth/roles/remove
+     * 请求体示例:
+     * {
+     *   "userId": 5,
+     *   "role": "AUDITOR"
+     * }
+     * 说明：仅超级管理员可访问
+     */
+    @DeleteMapping("/roles/remove")
+    public ApiResponse<String> removeRole(@RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.get("userId").toString());
+        String role = request.get("role").toString();
+        return authService.removeRole(userId, role);
+    }
 }

@@ -123,6 +123,57 @@ public class AuthService {
         return ApiResponse.success(roles);
     }
 
+    /**
+     * 查询用户列表（分页）
+     */
+    public ApiResponse<Map<String, Object>> getUserList(int page, int pageSize) {
+        int offset = (page - 1) * pageSize;
+        List<UserAccount> users = userMapper.findAll(offset, pageSize);
+        int total = userMapper.countAll();
+
+        // 为每个用户查询角色
+        List<Map<String, Object>> userList = new ArrayList<>();
+        for (UserAccount user : users) {
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", user.getId());
+            userMap.put("username", user.getUsername());
+            userMap.put("email", user.getEmail());
+            userMap.put("phone", user.getPhone());
+            userMap.put("status", user.getStatus());
+            userMap.put("createdAt", user.getCreatedAt());
+            userMap.put("roles", roleMapper.findRolesByUserId(user.getId()));
+            userList.add(userMap);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", userList);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 删除用户角色
+     */
+    public ApiResponse<String> removeRole(Long userId, String role) {
+        List<String> roles = roleMapper.findRolesByUserId(userId);
+        if (!roles.contains(role)) {
+            return ApiResponse.error(400, "用户不拥有该角色");
+        }
+        // 不能删除ADMIN角色
+        if ("ADMIN".equals(role)) {
+            return ApiResponse.error(400, "不能删除超级管理员角色");
+        }
+        // 不能删除最后一个角色
+        if (roles.size() <= 1) {
+            return ApiResponse.error(400, "不能删除用户的最后一个角色");
+        }
+        roleMapper.deleteUserRole(userId, role);
+        return ApiResponse.success("角色移除成功");
+    }
+
     private String generateToken(UserAccount user, List<String> roles) {
         Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         Date now = new Date();
