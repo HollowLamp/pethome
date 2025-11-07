@@ -39,4 +39,10 @@ public interface OrgService {
 
     // 查询用户所属机构列表
     ApiResponse<Object> getMemberships(Long userId);
+
+    // 更新机构资质链接
+    ApiResponse<com.adoption.org.entity.Organization> updateLicense(Long orgId, Long operatorId, String licenseUrl);
+
+    // 获取待审核机构列表
+    ApiResponse<java.util.List<com.adoption.org.entity.Organization>> listPendingOrganizations();
 }

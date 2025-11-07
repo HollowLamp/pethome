@@ -15,6 +15,7 @@ public class Pet {
     private String description;
     private String createdAt;
     private String updatedAt;
+    private String orgName; // 机构名称（通过远程调用获取，不存储在数据库中）
 
     // Getters and Setters
     public Long getId() {
@@ -127,6 +128,14 @@ public class Pet {
 
     public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getOrgName() {
+        return orgName;
+    }
+
+    public void setOrgName(String orgName) {
+        this.orgName = orgName;
     }
 }
 

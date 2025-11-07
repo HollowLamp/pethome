@@ -1,8 +1,11 @@
 package com.adoption.pet.service;
 
 import com.adoption.common.api.ApiResponse;
+import com.adoption.pet.feign.OrgServiceClient;
 import com.adoption.pet.model.Pet;
 import com.adoption.pet.repository.PetMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -11,10 +14,14 @@ import java.util.Map;
 
 @Service
 public class PetService {
-    private final PetMapper petMapper;
+    private static final Logger log = LoggerFactory.getLogger(PetService.class);
 
-    public PetService(PetMapper petMapper) {
+    private final PetMapper petMapper;
+    private final OrgServiceClient orgServiceClient;
+
+    public PetService(PetMapper petMapper, OrgServiceClient orgServiceClient) {
         this.petMapper = petMapper;
+        this.orgServiceClient = orgServiceClient;
     }
 
     /**
@@ -42,6 +49,24 @@ public class PetService {
         if (pet == null) {
             return ApiResponse.error(404, "宠物不存在");
         }
+
+        // 通过 Feign 调用 org-service 获取机构信息
+        if (pet.getOrgId() != null) {
+            try {
+                ApiResponse<Map<String, Object>> orgResponse = orgServiceClient.getOrgDetail(pet.getOrgId());
+                if (orgResponse != null && orgResponse.getCode() == 200 && orgResponse.getData() != null) {
+                    Map<String, Object> orgData = orgResponse.getData();
+                    // 从返回的机构信息中提取名称
+                    if (orgData.get("name") != null) {
+                        pet.setOrgName(orgData.get("name").toString());
+                    }
+                }
+            } catch (Exception e) {
+                // 如果调用失败，不影响主流程，只记录日志
+                log.warn("获取机构信息失败，orgId: {}, error: {}", pet.getOrgId(), e.getMessage());
+            }
+        }
+
         return ApiResponse.success(pet);
     }
 

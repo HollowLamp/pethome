@@ -232,6 +232,25 @@ public class AuthService {
     }
 
     /**
+     * 根据用户ID获取用户信息（用于跨服务调用）
+     */
+    public ApiResponse<Map<String, Object>> getUserById(Long userId) {
+        UserAccount user = userMapper.findById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "用户不存在");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+        result.put("avatarUrl", user.getAvatarUrl());
+
+        return ApiResponse.success(result);
+    }
+
+    /**
      * 更新用户信息（不包括密码）
      */
     public ApiResponse<Map<String, Object>> updateUser(Long userId, String username, String email, String phone, String avatarUrl) {

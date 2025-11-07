@@ -11,6 +11,9 @@ import RoleManagement from "../pages/Admin/RoleManagement/RoleManagement";
 import PetManagement from "../pages/Admin/PetManagement/PetManagement";
 import PetHealth from "../pages/Admin/PetHealth/PetHealth";
 import FeedbackArchive from "../pages/Admin/FeedbackArchive/FeedbackArchive";
+import OrgApplication from "../pages/Admin/Org/OrgApplication";
+import OrgStaff from "../pages/Admin/Org/OrgStaff";
+import OrgApproval from "../pages/Admin/Org/OrgApproval";
 import CommunitySettings from "../pages/Settings/CommunitySettings/CommunitySettings";
 import PetExplore from "../pages/Pets/Explore/PetExplore";
 import PetDetail from "../pages/Pets/Detail/PetDetail";
@@ -30,6 +33,9 @@ const routes = createRoutesFromElements(
       <Route path="pet-management" element={<PetManagement />} />
       <Route path="pet-health" element={<PetHealth />} />
       <Route path="feedback-archive" element={<FeedbackArchive />} />
+      <Route path="org-application" element={<OrgApplication />} />
+      <Route path="org-staff" element={<OrgStaff />} />
+      <Route path="org-approval" element={<OrgApproval />} />
       {/* 其他admin子路由可以在这里添加 */}
     </Route>
     <Route path="settings">

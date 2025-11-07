@@ -37,5 +37,19 @@ public interface OrganizationMapper {
      */
     @Update("UPDATE org SET status=#{status}, updated_at=#{updatedAt} WHERE id=#{id}")
     void updateStatus(@Param("id") Long id, @Param("status") String status, @Param("updatedAt") java.time.LocalDateTime updatedAt);
+
+    /**
+     * 更新资质链接
+     */
+    @Update("UPDATE org SET license_url=#{licenseUrl}, updated_at=#{updatedAt} WHERE id=#{id}")
+    void updateLicenseUrl(@Param("id") Long id,
+                          @Param("licenseUrl") String licenseUrl,
+                          @Param("updatedAt") java.time.LocalDateTime updatedAt);
+
+    /**
+     * 按状态查询机构
+     */
+    @Select("SELECT * FROM org WHERE status = #{status} ORDER BY created_at ASC")
+    List<Organization> findByStatus(@Param("status") String status);
 }
 

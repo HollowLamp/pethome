@@ -13,7 +13,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * 2) 开启服务注册发现（Eureka 客户端），使服务能够被网关/其他服务发现
  * 3) 预留 Feign 客户端能力，后续如需调用外部微服务可直接声明接口
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.adoption.org, com.adoption.common")
 @EnableDiscoveryClient
 @EnableFeignClients
 public class OrgServiceApplication {

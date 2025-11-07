@@ -12,10 +12,16 @@ import com.adoption.org.repository.OrgMemberMapper;
 import com.adoption.org.service.OrgService;
 import com.adoption.org.event.OrgEvent;
 import com.adoption.org.event.OrgEventPublisher;
+import com.adoption.org.feign.AuthServiceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -29,19 +35,22 @@ import java.util.List;
  */
 @Service
 public class OrgServiceImpl implements OrgService {
+    private static final Logger log = LoggerFactory.getLogger(OrgServiceImpl.class);
 
     private final OrganizationMapper organizationMapper;
     private final OrgMemberMapper orgMemberMapper;
-
     private final OrgEventPublisher eventPublisher;
+    private final AuthServiceClient authServiceClient;
 
     // 构造注入 mapper
     public OrgServiceImpl(OrganizationMapper organizationMapper,
                           OrgMemberMapper orgMemberMapper,
-                          OrgEventPublisher eventPublisher) {
+                          OrgEventPublisher eventPublisher,
+                          AuthServiceClient authServiceClient) {
         this.organizationMapper = organizationMapper;
         this.orgMemberMapper = orgMemberMapper;
         this.eventPublisher = eventPublisher; // 注入事件发布器
+        this.authServiceClient = authServiceClient;
     }
 
     @Override
@@ -206,7 +215,37 @@ public class OrgServiceImpl implements OrgService {
         // 查询机构成员列表
         List<OrgMember> members = orgMemberMapper.findByOrgId(orgId);
 
-        return ApiResponse.success(members);
+        // 通过 Feign 调用 auth-service 获取每个成员的用户信息
+        List<Map<String, Object>> memberList = new ArrayList<>();
+        for (OrgMember member : members) {
+            Map<String, Object> memberMap = new HashMap<>();
+            memberMap.put("id", member.getId());
+            memberMap.put("userId", member.getUserId());
+            memberMap.put("orgId", member.getOrgId());
+            memberMap.put("createdAt", member.getCreatedAt());
+            memberMap.put("membershipCreatedAt", member.getCreatedAt());
+
+            // 调用 auth-service 获取用户信息
+            if (member.getUserId() != null) {
+                try {
+                    ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(member.getUserId());
+                    if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                        Map<String, Object> userData = userResponse.getData();
+                        memberMap.put("username", userData.get("username"));
+                        memberMap.put("email", userData.get("email"));
+                        memberMap.put("phone", userData.get("phone"));
+                        memberMap.put("avatarUrl", userData.get("avatarUrl"));
+                    }
+                } catch (Exception e) {
+                    // 如果调用失败，不影响主流程，只记录日志
+                    log.warn("获取用户信息失败，userId: {}, error: {}", member.getUserId(), e.getMessage());
+                }
+            }
+
+            memberList.add(memberMap);
+        }
+
+        return ApiResponse.success(memberList);
     }
 
 
@@ -215,4 +254,29 @@ public class OrgServiceImpl implements OrgService {
         return ApiResponse.success(orgMemberMapper.findMembershipsWithOrgByUserId(userId));
     }
 
+
+    @Override
+    public ApiResponse<Organization> updateLicense(Long orgId, Long operatorId, String licenseUrl) {
+        Organization org = organizationMapper.findById(orgId);
+        if (org == null) {
+            return ApiResponse.error(404, "机构不存在");
+        }
+
+        boolean isOwner = org.getCreatedBy() != null && org.getCreatedBy().equals(operatorId);
+        boolean isMember = orgMemberMapper.findByOrgIdAndUserId(orgId, operatorId) != null;
+        if (!isOwner && !isMember) {
+            return ApiResponse.error(403, "无权更新该机构资质");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        organizationMapper.updateLicenseUrl(orgId, licenseUrl, now);
+        Organization updated = organizationMapper.findById(orgId);
+        return ApiResponse.success(updated);
+    }
+
+    @Override
+    public ApiResponse<List<Organization>> listPendingOrganizations() {
+        List<Organization> pending = organizationMapper.findByStatus(OrgStatus.PENDING.name());
+        return ApiResponse.success(pending);
+    }
 }

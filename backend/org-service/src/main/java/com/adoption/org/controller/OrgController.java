@@ -5,9 +5,16 @@ import com.adoption.org.dto.OrganizationApplyRequest;
 import com.adoption.org.dto.OrganizationApproveRequest;
 import com.adoption.org.dto.AddMemberRequest;
 import com.adoption.org.service.OrgService;
+import com.adoption.common.service.FileService;
+import com.adoption.common.util.FileUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * OrgController
@@ -28,9 +35,11 @@ public class OrgController {
 
     // Service 层依赖，通过构造方法注入，便于测试与解耦
     private final OrgService orgService;
+    private final FileService fileService;
 
-    public OrgController(OrgService orgService) {
+    public OrgController(OrgService orgService, FileService fileService) {
         this.orgService = orgService;
+        this.fileService = fileService;
     }
 
     /**
@@ -116,5 +125,58 @@ public class OrgController {
     @GetMapping("/users/{uid}/memberships")
     public ApiResponse<Object> getMemberships(@PathVariable("uid") Long userId) {
         return orgService.getMemberships(userId);
+    }
+
+    /**
+     * 上传机构资质文件（支持申请前或更新已有机构的资质）
+     * POST /org/license/upload
+     */
+    @PostMapping("/license/upload")
+    public ApiResponse<Map<String, Object>> uploadLicense(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "orgId", required = false) Long orgId
+    ) {
+        try {
+            if (file == null || file.isEmpty()) {
+                return ApiResponse.error(400, "文件不能为空");
+            }
+
+            String filename = file.getOriginalFilename();
+            if (!FileUtils.isImage(filename)) {
+                return ApiResponse.error(400, "仅支持图片文件");
+            }
+
+            InputStream inputStream = FileUtils.toInputStream(file);
+            if (inputStream == null) {
+                return ApiResponse.error(400, "无法读取文件内容");
+            }
+
+            FileService.FileInfo fileInfo = fileService.uploadFile(inputStream, filename, "org-license");
+
+            if (orgId != null) {
+                ApiResponse<?> updateRes = orgService.updateLicense(orgId, userId, fileInfo.getRelativePath());
+                if (updateRes.getCode() != 200) {
+                    return ApiResponse.error(updateRes.getCode(), updateRes.getMessage());
+                }
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("relativePath", fileInfo.getRelativePath());
+            result.put("licenseUrl", fileInfo.getUrl());
+            result.put("originalFilename", fileInfo.getOriginalFilename());
+            return ApiResponse.success(result);
+
+        } catch (Exception e) {
+            return ApiResponse.error(500, "资质文件上传失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取待审核的机构列表
+     */
+    @GetMapping("/applications/pending")
+    public ApiResponse<java.util.List<com.adoption.org.entity.Organization>> listPending() {
+        return orgService.listPendingOrganizations();
     }
 }

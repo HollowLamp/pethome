@@ -20,6 +20,7 @@ public class PetHealthService {
 
     /**
      * 更新健康/疫苗记录（维护员）
+     * 每次更新都创建新记录，保留历史记录
      */
     public ApiResponse<PetHealth> updateHealth(Long petId, PetHealth health, Long updatedBy) {
         // 检查宠物是否存在
@@ -30,16 +31,10 @@ public class PetHealthService {
         health.setPetId(petId);
         health.setUpdatedBy(updatedBy);
 
-        // 检查是否已有记录
-        PetHealth existing = petHealthMapper.findLatestByPetId(petId);
-        if (existing != null) {
-            // 更新现有记录
-            petHealthMapper.updateByPetId(health);
-        } else {
-            // 创建新记录
-            petHealthMapper.insert(health);
-        }
+        // 总是创建新记录，保留历史
+        petHealthMapper.insert(health);
 
+        // 返回刚创建的最新记录
         PetHealth updated = petHealthMapper.findLatestByPetId(petId);
         return ApiResponse.success(updated);
     }

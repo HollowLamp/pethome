@@ -96,6 +96,16 @@ public class AuthController {
     }
 
     /**
+     * 根据用户ID获取用户信息
+     * GET /auth/users/{id}
+     * 说明：用于跨服务调用，获取用户基本信息
+     */
+    @GetMapping("/users/{id}")
+    public ApiResponse<Map<String, Object>> getUserById(@PathVariable("id") Long userId) {
+        return authService.getUserById(userId);
+    }
+
+    /**
      * 删除用户角色
      * DELETE /auth/roles/remove
      * 请求体示例:

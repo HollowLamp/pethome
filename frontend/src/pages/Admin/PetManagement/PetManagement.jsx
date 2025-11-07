@@ -33,6 +33,10 @@ const PET_TYPE_OPTIONS = [
   { value: "CAT", label: "猫咪" },
   { value: "RABBIT", label: "兔子" },
   { value: "BIRD", label: "小鸟" },
+  { value: "HAMSTER", label: "仓鼠" },
+  { value: "GUINEA_PIG", label: "豚鼠" },
+  { value: "TURTLE", label: "乌龟" },
+  { value: "FISH", label: "鱼" },
   { value: "OTHER", label: "其他" },
 ];
 
@@ -71,7 +75,7 @@ const TYPE_COLOR_MAP = {
 
 export default function PetManagement() {
   const { user } = useAuthStore();
-  const orgId = user?.orgId;
+  const userId = user?.id || user?.userId;
 
   const [form] = Form.useForm();
   const [pets, setPets] = useState([]);
@@ -90,6 +94,43 @@ export default function PetManagement() {
   const [currentPet, setCurrentPet] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPetId, setUploadingPetId] = useState(null);
+  const [orgOptions, setOrgOptions] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(false);
+
+  const fetchMemberships = async () => {
+    if (!userId) return;
+    setOrgLoading(true);
+    try {
+      const res = await api.org.getUserMemberships(userId);
+      if (res?.code === 200) {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.list || res.data?.memberships || [];
+        const mapped = list
+          .map((item) => {
+            const org = item.organizationId ? item : item.org || item;
+            const id = org.orgId || org.organizationId || org.id;
+            if (!id) return null;
+            return {
+              label: org.name || `机构 ${id}`,
+              value: id,
+            };
+          })
+          .filter(Boolean);
+        setOrgOptions(mapped);
+        if (mapped.length > 0) {
+          setSelectedOrgId((prev) => prev ?? mapped[0].value);
+        } else {
+          setSelectedOrgId(null);
+        }
+      }
+    } catch (e) {
+      message.error(e?.message || "获取机构列表失败");
+    } finally {
+      setOrgLoading(false);
+    }
+  };
 
   const fetchPets = async (page, pageSize) => {
     setLoading(true);
@@ -99,7 +140,7 @@ export default function PetManagement() {
         pageSize,
         type: filters.type || undefined,
         status: filters.status || undefined,
-        orgId,
+        orgId: selectedOrgId,
       };
       const res = await api.pets.fetchPets(params);
       if (res?.code === 200) {
@@ -120,10 +161,19 @@ export default function PetManagement() {
   };
 
   useEffect(() => {
+    fetchMemberships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => {
+    if (!selectedOrgId) {
+      setPets([]);
+      return;
+    }
     fetchPets(1, pagination.pageSize);
     setPagination((prev) => ({ ...prev, current: 1 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, orgId, pagination.pageSize]);
+  }, [filters, selectedOrgId, pagination.pageSize]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -131,7 +181,7 @@ export default function PetManagement() {
     form.resetFields();
     form.setFieldsValue({
       status: "AVAILABLE",
-      orgId,
+      orgId: selectedOrgId,
     });
     setModalVisible(true);
   };
@@ -141,7 +191,7 @@ export default function PetManagement() {
     setCurrentPet(pet);
     form.setFieldsValue({
       ...pet,
-      orgId: pet.orgId || orgId,
+      orgId: pet.orgId || selectedOrgId,
     });
     setModalVisible(true);
   };
@@ -158,7 +208,7 @@ export default function PetManagement() {
       setSubmitting(true);
       const payload = {
         ...values,
-        orgId: values.orgId || orgId,
+        orgId: values.orgId || selectedOrgId,
       };
 
       if (!payload.orgId) {
@@ -376,6 +426,7 @@ export default function PetManagement() {
   ];
 
   const handleTableChange = (nextPagination) => {
+    if (!selectedOrgId) return;
     fetchPets(nextPagination.current, nextPagination.pageSize);
   };
 
@@ -388,11 +439,22 @@ export default function PetManagement() {
               发布/下架宠物
             </Title>
             <Space>
+              <Select
+                placeholder="选择机构"
+                loading={orgLoading}
+                value={selectedOrgId}
+                style={{ width: 220 }}
+                onChange={(value) => setSelectedOrgId(value || null)}
+                options={orgOptions}
+                allowClear={orgOptions.length > 1}
+                disabled={orgOptions.length === 0}
+              />
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() =>
                   fetchPets(pagination.current, pagination.pageSize)
                 }
+                disabled={!selectedOrgId}
               >
                 刷新
               </Button>
@@ -400,11 +462,17 @@ export default function PetManagement() {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={openCreateModal}
+                disabled={!selectedOrgId}
               >
                 新增宠物
               </Button>
             </Space>
           </Space>
+          {orgOptions.length === 0 && (
+            <Paragraph type="warning" style={{ marginBottom: 0 }}>
+              当前账号未关联机构，无法管理宠物。
+            </Paragraph>
+          )}
           <Paragraph type="secondary" style={{ marginBottom: 0 }}>
             支持根据宠物类型与状态进行筛选，新增宠物时请完整填写基本信息，上传封面图可提升曝光度。
           </Paragraph>
@@ -475,10 +543,14 @@ export default function PetManagement() {
         >
           <Form.Item
             name="orgId"
-            label="机构ID"
-            rules={[{ required: true, message: "请输入机构ID" }]}
+            label="机构"
+            rules={[{ required: true, message: "请选择机构" }]}
           >
-            <Input disabled={!!orgId} placeholder="请输入机构ID" />
+            <Select
+              placeholder="请选择所属机构"
+              options={orgOptions}
+              allowClear
+            />
           </Form.Item>
 
           <Divider orientation="left">基本信息</Divider>

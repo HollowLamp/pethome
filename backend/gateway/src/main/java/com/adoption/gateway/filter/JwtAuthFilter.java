@@ -66,13 +66,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 return exchange.getResponse().setComplete();
             }
 
-            // 只有超级管理员能查询用户角色
-            if (path.startsWith("/auth/users/") && path.endsWith("/roles") && !roles.contains("ADMIN")) {
-                System.out.println("[网关] 权限不足：尝试查询用户角色，已拒绝，用户ID=" + userId);
-                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                return exchange.getResponse().setComplete();
-            }
-
             // ==== RBAC org模块 ====
             // POST /org/apply - 只有 ORG_ADMIN 可以申请机构入驻
             if (path.equals("/org/apply") && requestMethod.equals("POST")
