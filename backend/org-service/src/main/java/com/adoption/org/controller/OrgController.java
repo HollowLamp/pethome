@@ -11,16 +11,22 @@ import jakarta.validation.Valid;
 
 /**
  * OrgController
- * 本Controller负责机构组织相关的所有对外REST接口
- * 包含机构入驻申请、机构审核、机构成员管理等能力
- * 所有接口返回值均为 ApiResponse<T>，统一响应规范
+ *
+ * 说明：
+ * - 对外提供“机构组织”相关 REST 接口。
+ * - 涵盖：机构入驻申请、审核（通过/拒绝）、机构成员的增删查、机构详情等。
+ * - 统一返回体：ApiResponse<T>，便于网关与前端统一处理。
+ *
+ * 接口鉴别：
+ * - 本服务通过请求头 X-User-Id 获取当前用户身份（由网关透传）。
+ * - 更复杂的角色/权限判断，请在 Service 层完成，Controller 只做参数接收与转发。
  */
 @RestController
 @Validated
 @RequestMapping("/org")
 public class OrgController {
 
-    // Service层依赖，通过构造方法注入
+    // Service 层依赖，通过构造方法注入，便于测试与解耦
     private final OrgService orgService;
 
     public OrgController(OrgService orgService) {
@@ -29,8 +35,9 @@ public class OrgController {
 
     /**
      * 机构入驻申请
-     * POST /orgs/apply
-     * 前端提交机构相关基础信息
+     * Method: POST /org/apply
+     * 入参：OrganizationApplyRequest（机构基本资料）+ X-User-Id（申请人用户ID）
+     * 说明：将新机构以 PENDING 状态入库，等待管理员审核
      */
     @PostMapping("/apply")
     public ApiResponse<String> apply(
@@ -43,7 +50,10 @@ public class OrgController {
 
     /**
      * 管理员审核机构入驻申请（通过）
-     * POST /orgs/{id}/approve
+     * Method: POST /org/{id}/approve
+     * 说明：
+     * - 仅允许对 PENDING 状态的机构进行通过操作
+     * - 通过后将创建者加入 org_member，避免后续无人管理
      */
     @PostMapping("/{id}/approve")
     public ApiResponse<String> approve(@PathVariable Long id, @Valid @RequestBody OrganizationApproveRequest request) {
@@ -52,7 +62,8 @@ public class OrgController {
 
     /**
      * 管理员审核机构入驻申请（拒绝）
-     * POST /orgs/{id}/reject
+     * Method: POST /org/{id}/reject
+     * 说明：仅允许对 PENDING 状态的机构进行拒绝操作
      */
     @PostMapping("/{id}/reject")
     public ApiResponse<String> reject(@PathVariable Long id, @Valid @RequestBody OrganizationApproveRequest request) {
@@ -61,7 +72,8 @@ public class OrgController {
 
     /**
      * 查询机构详情
-     * GET /orgs/{id}
+     * Method: GET /org/{id}
+     * 返回：Organization 基础信息（后续可拼接成员列表/统计等）
      */
     @GetMapping("/{id}")
     public ApiResponse<Object> getDetail(@PathVariable Long id) {
@@ -69,8 +81,10 @@ public class OrgController {
     }
 
     /**
-     * 给机构添加成员（机构管理员操作）
-     * POST /orgs/{id}/members
+     * 给机构添加成员（机构拥有者操作）
+     * Method: POST /org/{id}/members
+     * 入参：AddMemberRequest(userId)
+     * 说明：若成员已存在则返回 400，避免重复
      */
     @PostMapping("/{id}/members")
     public ApiResponse<String> addMember(@PathVariable Long id, @Valid @RequestBody AddMemberRequest request) {
@@ -78,8 +92,8 @@ public class OrgController {
     }
 
     /**
-     * 从机构中移除成员（机构管理员操作）
-     * DELETE /orgs/{id}/members/{uid}
+     * 从机构中移除成员（机构拥有者操作）
+     * Method: DELETE /org/{id}/members/{uid}
      */
     @DeleteMapping("/{id}/members/{uid}")
     public ApiResponse<String> deleteMember(@PathVariable Long id, @PathVariable Long uid) {
@@ -88,7 +102,7 @@ public class OrgController {
 
     /**
      * 获取机构成员列表
-     * GET /orgs/{id}/members
+     * Method: GET /org/{id}/members
      */
     @GetMapping("/{id}/members")
     public ApiResponse<Object> getMembers(@PathVariable Long id) {

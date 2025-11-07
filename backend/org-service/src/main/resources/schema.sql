@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS org (
   address      VARCHAR(255)   NOT NULL,
   contact_name VARCHAR(64)    NOT NULL,
   contact_phone VARCHAR(32)   NOT NULL,
-  status       VARCHAR(32)    NOT NULL,
+  status       ENUM('PENDING','APPROVED','REJECTED') NOT NULL,
   created_by   BIGINT         NOT NULL,
   created_at   DATETIME       NOT NULL,
   updated_at   DATETIME       NOT NULL
@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS org_member (
   id         BIGINT PRIMARY KEY AUTO_INCREMENT,
   org_id     BIGINT        NOT NULL,
   user_id    BIGINT        NOT NULL,
-  role       VARCHAR(32)   NOT NULL,
   created_at DATETIME      NOT NULL,
   UNIQUE KEY uk_org_user (org_id, user_id)
 );

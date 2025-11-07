@@ -1,18 +1,21 @@
 package com.adoption.org.entity;
 
-import com.adoption.common.constant.RoleEnum;
 import java.time.LocalDateTime;
 
 /**
  * 对应表 org_member
- * 每条记录代表某一个用户属于某一个机构，并在机构内拥有一定角色
+ * 每条记录代表某一个用户属于某一个机构
+ *
+ * 设计说明：
+ * - 不持久化角色列；
+ * - 是否机构拥有者通过对比 Organization.createdBy 与 userId 来推断；
+ * - 是否机构成员通过是否存在该记录来判断。
  */
 public class OrgMember {
 
     private Long id;                 // 主键
     private Long orgId;              // 所属机构ID
     private Long userId;             // 用户ID
-    private RoleEnum role;           // 成员角色（仅 ORG_ADMIN / ORG_STAFF 用于 org-service）
     private LocalDateTime createdAt; // 加入时间
 
     // Getter / Setter
@@ -33,12 +36,6 @@ public class OrgMember {
     }
     public void setUserId(Long userId) {
         this.userId = userId;
-    }
-    public RoleEnum getRole() {
-        return role;
-    }
-    public void setRole(RoleEnum role) {
-        this.role = role;
     }
     public LocalDateTime getCreatedAt() {
         return createdAt;

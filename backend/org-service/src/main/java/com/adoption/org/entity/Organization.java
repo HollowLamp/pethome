@@ -6,6 +6,10 @@ import java.time.LocalDateTime;
  * 对应表 org
  * 机构基础信息实体类
  * 每条记录代表一个机构
+ *
+ * 字段说明：
+ * - status：使用数据库 ENUM(PENDING/APPROVED/REJECTED)，在应用层对应 OrgStatus 枚举
+ * - createdBy：创建人（入驻申请发起人），用于推断机构拥有者
  */
 public class Organization {
 

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 /**
  * 请求机构入驻申请时的参数结构体
  * 前端提交入驻申请时，将机构的基础信息通过这个 DTO 传给 org-service
+ * 说明：此处仅做必填校验，复杂校验（如手机号格式）可在网关或前端完成
  */
 public class OrganizationApplyRequest {
 

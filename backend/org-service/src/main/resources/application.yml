@@ -1,12 +1,18 @@
+## 应用最小配置（本地覆盖，更多配置由 config-server 下发）
 spring:
   application:
-    name: org-service
+    name: org-service        # 服务名（需与网关路由、注册中心一致）
   config:
-    import: optional:configserver:
+    import: configserver:http://localhost:8888  # 指定配置中心地址
+  cloud:
+    config:
+      fail-fast: false       # 配置中心不可用时不致命，便于本地开发
 
 server:
-  port: 8082
+  port: 8082                 # 本服务对外端口（如由配置中心下发则以后者为准）
 
 mybatis:
   configuration:
-    map-underscore-to-camel-case: true
+    map-underscore-to-camel-case: true  # 数据库下划线映射为 Java 驼峰
+
+

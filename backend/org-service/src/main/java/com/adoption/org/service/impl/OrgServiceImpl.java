@@ -1,7 +1,6 @@
 package com.adoption.org.service.impl;
 
 import com.adoption.common.api.ApiResponse;
-import com.adoption.common.constant.RoleEnum;
 import com.adoption.org.dto.OrganizationApplyRequest;
 import com.adoption.org.dto.OrganizationApproveRequest;
 import com.adoption.org.dto.AddMemberRequest;
@@ -22,6 +21,11 @@ import java.util.List;
 /**
  * OrgServiceImpl
  * 机构服务业务逻辑实现类
+ *
+ * 关键约定：
+ * - 机构生命周期：PENDING(待审核) -> APPROVED(通过) / REJECTED(拒绝)
+ * - 审核通过后，自动将创建者加入 org_member，保证机构内有管理员/拥有者
+ * - org_member 不持久化角色列：是否拥有者由 org.created_by == userId 推断
  */
 @Service
 public class OrgServiceImpl implements OrgService {
@@ -42,7 +46,7 @@ public class OrgServiceImpl implements OrgService {
 
     @Override
     public ApiResponse<String> apply(OrganizationApplyRequest request, String userId) {
-        // 1）构造Organization实体对象
+        // 1）构造 Organization 实体对象
         Organization org = new Organization();
         org.setName(request.getName());
         org.setLicenseUrl(request.getLicenseUrl());
@@ -61,7 +65,7 @@ public class OrgServiceImpl implements OrgService {
         org.setCreatedAt(now);
         org.setUpdatedAt(now);
 
-        // 5）落库
+        // 5）落库（依赖 @Options(useGeneratedKeys=true) 回填自增ID）
         organizationMapper.insert(org);
 
         // 6）发布事件 event.org.applied
@@ -91,13 +95,12 @@ public class OrgServiceImpl implements OrgService {
         LocalDateTime now = LocalDateTime.now();
         organizationMapper.updateStatus(orgId, OrgStatus.APPROVED.name(), now);
 
-        // 4. 审核通过后，将 created_by 用户加入 org_member，角色为 ORG_ADMIN（防止重复插入）
+        // 4. 审核通过后，将 created_by 用户加入 org_member（防止重复插入）
         OrgMember existing = orgMemberMapper.findByOrgIdAndUserId(orgId, org.getCreatedBy());
         if (existing == null) {
             OrgMember owner = new OrgMember();
             owner.setOrgId(orgId);
             owner.setUserId(org.getCreatedBy());
-            owner.setRole(RoleEnum.ORG_ADMIN);
             owner.setCreatedAt(now);
             orgMemberMapper.insert(owner);
         }
@@ -162,27 +165,16 @@ public class OrgServiceImpl implements OrgService {
             return ApiResponse.error(404, "机构不存在");
         }
 
-        // 2. 检查成员是否已存在
+        // 2. 检查成员是否已存在（唯一键保障同一用户不重复加入同一机构）
         OrgMember existing = orgMemberMapper.findByOrgIdAndUserId(orgId, request.getUserId());
         if (existing != null) {
             return ApiResponse.error(400, "该用户已是机构成员");
         }
 
-        // 3. 构造新成员记录（仅允许 ORG_ADMIN / ORG_STAFF）
-        RoleEnum role;
-        try {
-            role = RoleEnum.valueOf(request.getRole().trim().toUpperCase());
-        } catch (Exception ex) {
-            return ApiResponse.error(400, "非法角色");
-        }
-        if (role != RoleEnum.ORG_ADMIN && role != RoleEnum.ORG_STAFF) {
-            return ApiResponse.error(400, "不支持的机构角色");
-        }
-
+        // 3. 构造新成员记录
         OrgMember member = new OrgMember();
         member.setOrgId(orgId);
         member.setUserId(request.getUserId());
-        member.setRole(role);   // 仅接受 ORG_ADMIN / ORG_STAFF
         member.setCreatedAt(LocalDateTime.now());
 
         // 4. 插入数据库

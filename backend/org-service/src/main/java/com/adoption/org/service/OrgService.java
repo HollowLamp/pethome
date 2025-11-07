@@ -8,7 +8,11 @@ import com.adoption.org.dto.AddMemberRequest;
 /**
  * OrgService
  * 机构服务业务接口定义
- * Controller 不做逻辑运算，由此 Service 进行集中业务处理
+ *
+ * 设计说明：
+ * - Controller 只做参数接收与返回，所有业务处理集中在 Service
+ * - 返回统一使用 ApiResponse<T>
+ * - 权限判断建议在实现层结合 org/ org_member 数据完成
  */
 public interface OrgService {
 

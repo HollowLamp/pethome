@@ -14,9 +14,10 @@ public interface OrgMemberMapper {
 
     /**
      * 插入新的机构成员
+     * 说明：依赖表上的唯一键 (org_id, user_id) 防重复
      */
-    @Insert("INSERT INTO org_member (org_id, user_id, role, created_at) " +
-            "VALUES (#{orgId}, #{userId}, #{role}, #{createdAt})")
+    @Insert("INSERT INTO org_member (org_id, user_id, created_at) " +
+            "VALUES (#{orgId}, #{userId}, #{createdAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(OrgMember member);
 
