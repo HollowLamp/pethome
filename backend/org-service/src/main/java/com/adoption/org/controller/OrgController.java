@@ -108,4 +108,13 @@ public class OrgController {
     public ApiResponse<Object> getMembers(@PathVariable("id") Long id) {
         return orgService.getMembers(id);
     }
+
+    /**
+     * 查询用户加入的机构列表
+     * Method: GET /org/users/{uid}/memberships
+     */
+    @GetMapping("/users/{uid}/memberships")
+    public ApiResponse<Object> getMemberships(@PathVariable("uid") Long userId) {
+        return orgService.getMemberships(userId);
+    }
 }

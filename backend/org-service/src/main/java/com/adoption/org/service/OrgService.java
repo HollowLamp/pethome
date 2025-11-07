@@ -36,4 +36,7 @@ public interface OrgService {
 
     // 查询成员列表
     ApiResponse<Object> getMembers(Long orgId);
+
+    // 查询用户所属机构列表
+    ApiResponse<Object> getMemberships(Long userId);
 }

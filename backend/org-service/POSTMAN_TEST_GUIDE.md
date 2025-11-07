@@ -183,6 +183,27 @@
 
 ---
 
+### 8. 查询用户的机构成员关系
+**功能**：根据用户ID查询其加入的所有机构成员关系
+
+**请求信息**：
+- **Method**：`GET`
+- **URL**：`http://localhost:8080/org/users/{uid}/memberships`
+  - 示例：`http://localhost:8080/org/users/2002/memberships`
+- **Headers**：
+  ```
+  Content-Type: application/json
+  ```
+
+**预期结果**：
+- 返回数组，每个元素包含：id, orgId, userId, createdAt
+- 若未加入任何机构，返回空数组
+
+**使用示例**：
+- 可与接口 #5、#6 联合验证：先新增成员，再根据 userId 查询该用户的所有机构
+
+---
+
 ## 测试顺序建议
 
 ### 完整流程测试（推荐顺序）：

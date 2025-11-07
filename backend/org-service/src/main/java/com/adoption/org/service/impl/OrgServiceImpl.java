@@ -209,4 +209,10 @@ public class OrgServiceImpl implements OrgService {
         return ApiResponse.success(members);
     }
 
+
+    @Override
+    public ApiResponse<Object> getMemberships(Long userId) {
+        return ApiResponse.success(orgMemberMapper.findMembershipsWithOrgByUserId(userId));
+    }
+
 }
