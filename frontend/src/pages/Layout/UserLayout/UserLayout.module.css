@@ -1,5 +1,5 @@
 .header {
-  margin-top: 10px;
+  margin: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -13,7 +13,7 @@
 
 .left {
   display: flex;
-  gap: 32px
+  gap: 32px;
 }
 
 .logo {
@@ -30,4 +30,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.menu {
+  font-size: 16px;
+  color: #5b4337;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.menu::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #ff9163, #ffb782);
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.2s ease;
+}
+
+.menu:hover {
+  color: #ff7f5d;
+}
+
+.menu:hover::after {
+  transform: scaleX(1);
+}
+
+.menuActive {
+  color: #ff7f5d;
+}
+
+.menuActive::after {
+  transform: scaleX(1);
 }

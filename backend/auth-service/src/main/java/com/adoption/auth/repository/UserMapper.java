@@ -8,16 +8,20 @@ import java.util.List;
 @Mapper
 public interface UserMapper {
 
-    @Select("SELECT id, username, email, phone, password_hash AS passwordHash, status " +
+    @Select("SELECT id, username, email, phone, password_hash AS passwordHash, avatar_url AS avatarUrl, status " +
             "FROM user_account WHERE username = #{username}")
     UserAccount findByUsername(String username);
+
+    @Select("SELECT id, username, email, phone, avatar_url AS avatarUrl, status, created_at AS createdAt " +
+            "FROM user_account WHERE id = #{id}")
+    UserAccount findById(Long id);
 
     @Insert("INSERT INTO user_account (username, email, phone, password_hash, status, created_at, updated_at) " +
             "VALUES (#{username}, #{email}, #{phone}, #{passwordHash}, 'ACTIVE', NOW(), NOW())")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(UserAccount user);
 
-    @Select("SELECT id, username, email, phone, status, created_at AS createdAt " +
+    @Select("SELECT id, username, email, phone, avatar_url AS avatarUrl, status, created_at AS createdAt " +
             "FROM user_account " +
             "ORDER BY created_at DESC " +
             "LIMIT #{limit} OFFSET #{offset}")
@@ -25,4 +29,19 @@ public interface UserMapper {
 
     @Select("SELECT COUNT(*) FROM user_account")
     int countAll();
+
+    @Update("UPDATE user_account SET " +
+            "username = #{username}, " +
+            "email = #{email}, " +
+            "phone = #{phone}, " +
+            "avatar_url = #{avatarUrl}, " +
+            "updated_at = NOW() " +
+            "WHERE id = #{id}")
+    void update(UserAccount user);
+
+    @Update("UPDATE user_account SET " +
+            "password_hash = #{passwordHash}, " +
+            "updated_at = NOW() " +
+            "WHERE id = #{id}")
+    void updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
 }

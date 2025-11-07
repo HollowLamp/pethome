@@ -99,6 +99,7 @@ export default function RoleManagement() {
 
   useEffect(() => {
     fetchUsers(pagination.current, pagination.pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 分配角色
@@ -193,7 +194,7 @@ export default function RoleManagement() {
       title: "角色",
       dataIndex: "roles",
       key: "roles",
-      render: (roles, record) => (
+      render: (roles) => (
         <Space wrap>
           {roles?.map((role) => (
             <Tag key={role} color={ROLE_COLORS[role] || "default"}>

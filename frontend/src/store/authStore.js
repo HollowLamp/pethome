@@ -23,6 +23,12 @@ const useAuthStore = create(
           user: null,
         });
       },
+      // 更新用户信息
+      updateUser: (userData) => {
+        set((state) => ({
+          user: { ...state.user, ...userData },
+        }));
+      },
     }),
     {
       name: "auth-storage", // localStorage 的 key

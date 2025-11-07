@@ -98,6 +98,9 @@ public class AuthService {
         result.put("token", token);
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+        result.put("avatarUrl", user.getAvatarUrl());
         result.put("roles", roles);
 
         return ApiResponse.success(result);
@@ -204,5 +207,91 @@ public class AuthService {
 
     private String buildRegisterCodeKey(String email) {
         return "auth:register:code:" + email;
+    }
+
+    /**
+     * 获取当前用户信息
+     */
+    public ApiResponse<Map<String, Object>> getCurrentUser(Long userId) {
+        UserAccount user = userMapper.findById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "用户不存在");
+        }
+
+        List<String> roles = roleMapper.findRolesByUserId(userId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+        result.put("avatarUrl", user.getAvatarUrl());
+        result.put("roles", roles);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 更新用户信息（不包括密码）
+     */
+    public ApiResponse<Map<String, Object>> updateUser(Long userId, String username, String email, String phone, String avatarUrl) {
+        UserAccount user = userMapper.findById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "用户不存在");
+        }
+
+        // 如果修改用户名，检查是否重复
+        if (username != null && !username.equals(user.getUsername())) {
+            UserAccount existing = userMapper.findByUsername(username);
+            if (existing != null && !existing.getId().equals(userId)) {
+                return ApiResponse.error(4001, "用户名已存在");
+            }
+            user.setUsername(username);
+        }
+
+        if (email != null) {
+            user.setEmail(email);
+        }
+        if (phone != null) {
+            user.setPhone(phone);
+        }
+        if (avatarUrl != null) {
+            user.setAvatarUrl(avatarUrl);
+        }
+
+        userMapper.update(user);
+
+        // 返回更新后的用户信息
+        List<String> roles = roleMapper.findRolesByUserId(userId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+        result.put("avatarUrl", user.getAvatarUrl());
+        result.put("roles", roles);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 更新密码
+     */
+    public ApiResponse<String> updatePassword(Long userId, String oldPassword, String newPassword) {
+        UserAccount user = userMapper.findById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "用户不存在");
+        }
+
+        // 验证旧密码
+        if (!encoder.matches(oldPassword, user.getPasswordHash())) {
+            return ApiResponse.error(401, "原密码错误");
+        }
+
+        // 更新密码
+        String newPasswordHash = encoder.encode(newPassword);
+        userMapper.updatePassword(userId, newPasswordHash);
+
+        return ApiResponse.success("密码修改成功");
     }
 }

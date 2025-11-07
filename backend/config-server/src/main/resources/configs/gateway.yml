@@ -16,6 +16,12 @@ spring:
             - Path=/auth/**
           filters:
             - StripPrefix=0 # 保留 /auth 前缀
+        - id: file-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/files/**
+          filters:
+            - StripPrefix=0 # 保留 /files 前缀，转发到auth-service的FileController
         - id: org-service
           uri: lb://org-service
           predicates:

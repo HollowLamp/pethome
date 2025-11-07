@@ -29,6 +29,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Spring Context（用于@Service, @Value等注解） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+
         <!-- 日志接口 -->
         <dependency>
             <groupId>org.slf4j</groupId>

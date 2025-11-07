@@ -25,7 +25,17 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         // ==== 无需登陆的请求 ====
-        if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
+        // 宠物列表和详情无需登录，但需要排除需要登录的路径
+        boolean isPublicPetPath = path.startsWith("/pets") &&
+            !path.contains("/wishlist") &&
+            !path.contains("/health") &&
+            !path.contains("/feedbacks") &&
+            !path.startsWith("/pets/org");
+
+        if (path.startsWith("/auth/login") ||
+            path.startsWith("/auth/register") ||
+            path.startsWith("/files/") || // 文件访问无需登录
+            isPublicPetPath) { // 宠物列表和详情无需登录
             System.out.println("[网关] 放行无需登录的请求: " + path);
             return chain.filter(exchange);
         }
@@ -60,8 +70,45 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 return exchange.getResponse().setComplete();
             }
 
-            // ==== RBAC xx模块 ====
+            // ==== RBAC pet模块 ====
+            // POST /pets/org - 只有机构管理员可以创建宠物
+            if (path.equals("/pets/org") && "POST".equals(exchange.getRequest().getMethod().name()) && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关] 权限不足：尝试创建宠物，已拒绝，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
 
+            // PATCH /pets/org/{id} - 机构管理员或维护员可以修改宠物信息
+            if (path.matches("/pets/org/\\d+") && "PATCH".equals(exchange.getRequest().getMethod().name())
+                && !roles.contains("ORG_ADMIN") && !roles.contains("ORG_STAFF")) {
+                System.out.println("[网关] 权限不足：尝试修改宠物信息，已拒绝，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /pets/org/{id}/status - 只有机构管理员可以修改宠物状态
+            if (path.matches("/pets/org/\\d+/status") && "POST".equals(exchange.getRequest().getMethod().name()) && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关] 权限不足：尝试修改宠物状态，已拒绝，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /pets/org/{id}/cover - 机构管理员或维护员可以上传封面图
+            if (path.matches("/pets/org/\\d+/cover") && "POST".equals(exchange.getRequest().getMethod().name())
+                && !roles.contains("ORG_ADMIN") && !roles.contains("ORG_STAFF")) {
+                System.out.println("[网关] 权限不足：尝试上传封面图，已拒绝，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /pets/{id}/health - 只有维护员可以更新健康记录
+            if (path.matches("/pets/\\d+/health") && "POST".equals(exchange.getRequest().getMethod().name()) && !roles.contains("ORG_STAFF")) {
+                System.out.println("[网关] 权限不足：尝试更新健康记录，已拒绝，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // ==== RBAC xx模块 ====
 
             // 把用户信息透传下去（如果子服务需要知道是谁）
             exchange = exchange.mutate().request(

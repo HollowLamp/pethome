@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -15,6 +15,9 @@ import {
   MailOutlined,
   PhoneOutlined,
   LockOutlined,
+  SettingOutlined,
+  HeartOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router";
 import useAuthStore from "../../../../store/authStore";
@@ -38,6 +41,13 @@ export default function Me() {
     setActiveKey("login");
     setIsLoginModalOpen(true);
   };
+
+  // 监听全局事件，唤起登录弹窗（供详情页等地方调用）
+  useEffect(() => {
+    const open = () => handleShowLogin();
+    window.addEventListener("OPEN_LOGIN_MODAL", open);
+    return () => window.removeEventListener("OPEN_LOGIN_MODAL", open);
+  }, []);
 
   const handleLogin = async (values) => {
     try {
@@ -177,7 +187,46 @@ export default function Me() {
     return "?";
   };
 
+  const getAvatarUrl = () => {
+    if (user?.avatarUrl) {
+      // 如果是完整URL，直接使用；如果是相对路径，需要拼接
+      if (user.avatarUrl.startsWith("http") || user.avatarUrl.startsWith("/")) {
+        return user.avatarUrl;
+      }
+      return `/files/${user.avatarUrl}`;
+    }
+    return null;
+  };
+
   const menuItems = [
+    {
+      key: "wishlist",
+      label: "查看领养愿望单",
+      icon: <HeartOutlined />,
+      onClick: () => {
+        navigate("/wishlist");
+      },
+    },
+    {
+      key: "community-settings",
+      label: "设置社区资料",
+      icon: <SettingOutlined />,
+      onClick: () => {
+        navigate("/settings/community");
+      },
+    },
+    {
+      key: "adoption-settings",
+      label: "设置领养资料",
+      icon: <FileTextOutlined />,
+      onClick: () => {
+        // TODO: 实现领养资料设置页面
+        message.info("领养资料设置功能开发中");
+      },
+    },
+    {
+      type: "divider",
+    },
     {
       key: "logout",
       label: "退出登录",
@@ -191,7 +240,20 @@ export default function Me() {
       className={`${styles.meCircle} ${styles.loggedIn}`}
       title={user?.username || "用户"}
     >
-      <div className={styles.userAvatar}>{getUserDisplay()}</div>
+      {getAvatarUrl() ? (
+        <img
+          src={getAvatarUrl()}
+          alt={user?.username || "用户"}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+            objectFit: "cover",
+          }}
+        />
+      ) : (
+        <div className={styles.userAvatar}>{getUserDisplay()}</div>
+      )}
     </div>
   );
 

@@ -6,6 +6,7 @@ public class UserAccount {
     private String passwordHash;
     private String email;
     private String phone;
+    private String avatarUrl; // 头像URL（相对路径）
     private String status; // ACTIVE / BANNED
     private String createdAt;
     private String updatedAt;
@@ -49,6 +50,14 @@ public class UserAccount {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public String getStatus() {

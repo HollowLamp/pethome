@@ -26,4 +26,11 @@ eureka:
 
 jwt:
   secret: my-super-secret-key-my-super-secret-key-1234567890abcdef
-  expiration: 3600000   # 1小时，单位毫秒
+  expiration: 3600000 # 1小时，单位毫秒
+
+# 文件服务配置
+file:
+  upload:
+    path: ./uploads # 文件上传存储路径（相对路径或绝对路径）
+    url-prefix: /files # 文件访问URL前缀
+    max-size: 10485760 # 最大文件大小（字节），默认10MB

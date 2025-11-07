@@ -36,3 +36,28 @@ export function removeRoleApi(payload) {
   // payload: { userId, role }
   return http.delete("/auth/roles/remove", { data: payload });
 }
+
+export function getCurrentUserApi() {
+  return http.get("/auth/me");
+}
+
+export function updateUserApi(payload) {
+  // payload: { username?, email?, phone?, avatarUrl? }
+  return http.put("/auth/me", payload);
+}
+
+export function updatePasswordApi(payload) {
+  // payload: { oldPassword, newPassword }
+  return http.put("/auth/me/password", payload);
+}
+
+export function uploadAvatarApi(file) {
+  // file: File对象
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.post("/auth/me/avatar", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}

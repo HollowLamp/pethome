@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS user_account (
                                             email VARCHAR(128),
                                             phone VARCHAR(32),
                                             password_hash VARCHAR(255) NOT NULL,
+                                            avatar_url VARCHAR(500),
                                             status ENUM('ACTIVE','BANNED') DEFAULT 'ACTIVE' NOT NULL,
                                             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                                             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

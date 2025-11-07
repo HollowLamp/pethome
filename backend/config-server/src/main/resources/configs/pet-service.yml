@@ -1,0 +1,7 @@
+# pet-service 配置
+server:
+  port: 8083
+
+spring:
+  application:
+    name: pet-service
