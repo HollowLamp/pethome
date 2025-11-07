@@ -56,7 +56,7 @@ public class OrgController {
      * - 通过后将创建者加入 org_member，避免后续无人管理
      */
     @PostMapping("/{id}/approve")
-    public ApiResponse<String> approve(@PathVariable Long id, @Valid @RequestBody OrganizationApproveRequest request) {
+    public ApiResponse<String> approve(@PathVariable("id") Long id, @Valid @RequestBody OrganizationApproveRequest request) {
         return orgService.approve(id, request);
     }
 
@@ -66,7 +66,7 @@ public class OrgController {
      * 说明：仅允许对 PENDING 状态的机构进行拒绝操作
      */
     @PostMapping("/{id}/reject")
-    public ApiResponse<String> reject(@PathVariable Long id, @Valid @RequestBody OrganizationApproveRequest request) {
+    public ApiResponse<String> reject(@PathVariable("id") Long id, @Valid @RequestBody OrganizationApproveRequest request) {
         return orgService.reject(id, request);
     }
 
@@ -76,7 +76,7 @@ public class OrgController {
      * 返回：Organization 基础信息（后续可拼接成员列表/统计等）
      */
     @GetMapping("/{id}")
-    public ApiResponse<Object> getDetail(@PathVariable Long id) {
+    public ApiResponse<Object> getDetail(@PathVariable("id") Long id) {
         return orgService.getDetail(id);
     }
 
@@ -87,7 +87,7 @@ public class OrgController {
      * 说明：若成员已存在则返回 400，避免重复
      */
     @PostMapping("/{id}/members")
-    public ApiResponse<String> addMember(@PathVariable Long id, @Valid @RequestBody AddMemberRequest request) {
+    public ApiResponse<String> addMember(@PathVariable("id") Long id, @Valid @RequestBody AddMemberRequest request) {
         return orgService.addMember(id, request);
     }
 
@@ -96,7 +96,7 @@ public class OrgController {
      * Method: DELETE /org/{id}/members/{uid}
      */
     @DeleteMapping("/{id}/members/{uid}")
-    public ApiResponse<String> deleteMember(@PathVariable Long id, @PathVariable Long uid) {
+    public ApiResponse<String> deleteMember(@PathVariable("id") Long id, @PathVariable("uid") Long uid) {
         return orgService.deleteMember(id, uid);
     }
 
@@ -105,7 +105,7 @@ public class OrgController {
      * Method: GET /org/{id}/members
      */
     @GetMapping("/{id}/members")
-    public ApiResponse<Object> getMembers(@PathVariable Long id) {
+    public ApiResponse<Object> getMembers(@PathVariable("id") Long id) {
         return orgService.getMembers(id);
     }
 }
