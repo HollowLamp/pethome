@@ -1,0 +1,13 @@
+server:
+  port: 8084
+
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true  # 驼峰命名法的自动映射
+
+spring:
+  application:
+    name: adoption-service
+  config:
+    import: configserver:http://localhost:8888
