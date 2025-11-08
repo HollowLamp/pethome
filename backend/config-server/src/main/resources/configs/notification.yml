@@ -1,0 +1,11 @@
+# Notification Service 专用配置
+
+# RabbitMQ 配置（继承自 application.yml）
+# 事件监听配置
+notification:
+  rabbitmq:
+    exchange: notify
+    queue:
+      system: notify.system
+      direct: notify.direct
+      likes: notify.likes

@@ -5,7 +5,7 @@ import {
   Input,
   Button,
   Typography,
-  message,
+  App as AntdApp,
   Descriptions,
   Space,
   Empty,
@@ -18,6 +18,7 @@ import useAuthStore from "../../../store/authStore";
 const { Title, Paragraph, Text } = Typography;
 
 export default function OrgApplication() {
+  const { message } = AntdApp.useApp();
   const { user } = useAuthStore();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
@@ -25,9 +26,44 @@ export default function OrgApplication() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [uploadingNew, setUploadingNew] = useState(false);
   const [uploadingUpdate, setUploadingUpdate] = useState(false);
+  const [orgId, setOrgId] = useState(null);
 
-  const orgId = user?.orgId;
   const userId = user?.id || user?.userId;
+
+  // 获取用户所属的机构列表
+  const fetchUserMemberships = async () => {
+    if (!userId) {
+      setOrgId(null);
+      return;
+    }
+    try {
+      const res = await api.org.getUserMemberships(userId);
+      if (res?.code === 200) {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.list || res.data?.memberships || [];
+
+        // 从机构列表中提取机构ID
+        const firstOrg = list
+          .map((item) => {
+            const org = item.organizationId ? item : item.org || item;
+            return org.orgId || org.organizationId || org.id;
+          })
+          .filter(Boolean)[0];
+
+        if (firstOrg) {
+          setOrgId(firstOrg);
+        } else {
+          setOrgId(null);
+        }
+      } else {
+        setOrgId(null);
+      }
+    } catch (e) {
+      console.warn("获取用户机构列表失败", e);
+      setOrgId(null);
+    }
+  };
 
   const fetchOrgDetail = async () => {
     if (!orgId) {
@@ -50,6 +86,13 @@ export default function OrgApplication() {
     }
   };
 
+  // 先获取用户的机构列表
+  useEffect(() => {
+    fetchUserMemberships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // 获取到机构ID后，再获取机构详情
   useEffect(() => {
     fetchOrgDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,12 +157,24 @@ export default function OrgApplication() {
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
                 <Descriptions size="small" column={1} bordered>
                   <Descriptions.Item label="机构ID">{orgId}</Descriptions.Item>
-                  <Descriptions.Item label="机构名称">{orgDetail.name || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="地址">{orgDetail.address || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="联系人">{orgDetail.contactName || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="联系电话">{orgDetail.contactPhone || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="资质地址">{orgDetail.licenseUrl || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="状态">{orgDetail.status || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="机构名称">
+                    {orgDetail.name || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="地址">
+                    {orgDetail.address || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="联系人">
+                    {orgDetail.contactName || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="联系电话">
+                    {orgDetail.contactPhone || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="资质地址">
+                    {orgDetail.licenseUrl || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="状态">
+                    {orgDetail.status || "-"}
+                  </Descriptions.Item>
                 </Descriptions>
                 <Upload
                   beforeUpload={handleLicenseUpload(orgId, setUploadingUpdate)}
@@ -175,7 +230,9 @@ export default function OrgApplication() {
                   上传图片并自动填写链接
                 </Button>
               </Upload>
-              <Text type="secondary">支持 JPG/PNG 等格式，上传成功后自动填充链接。</Text>
+              <Text type="secondary">
+                支持 JPG/PNG 等格式，上传成功后自动填充链接。
+              </Text>
             </Form.Item>
             <Form.Item
               label="机构地址"

@@ -6,7 +6,7 @@ import {
   Button,
   Upload,
   Avatar,
-  message,
+  App as AntdApp,
   Space,
   Typography,
   Divider,
@@ -27,6 +27,7 @@ import "./CommunitySettings.module.css";
 const { Title } = Typography;
 
 export default function CommunitySettings() {
+  const { message } = AntdApp.useApp();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const navigate = useNavigate();

@@ -7,7 +7,6 @@ import {
   Button,
   Descriptions,
   Divider,
-  message,
   Tabs,
   List,
   Skeleton,
@@ -15,6 +14,8 @@ import {
   Upload,
   Modal,
   Input,
+  App as AntdApp,
+  Avatar,
 } from "antd";
 import {
   ShareAltOutlined,
@@ -23,7 +24,7 @@ import {
   CheckCircleOutlined,
   SmileOutlined,
 } from "@ant-design/icons";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import api from "../../../api";
 import useAuthStore from "../../../store/authStore";
 import styles from "./PetDetail.module.css";
@@ -57,7 +58,10 @@ const STATUS_COLORS = {
 };
 
 export default function PetDetail() {
+  const { message } = AntdApp.useApp();
   const { petId } = useParams();
+  const navigate = useNavigate();
+  const { modal } = AntdApp.useApp();
 
   const { isLoggedIn } = useAuthStore();
 
@@ -178,13 +182,87 @@ export default function PetDetail() {
     }
   };
 
-  const handleApply = () => {
+  const [applyModalVisible, setApplyModalVisible] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const checkUserProfile = async () => {
+    if (!isLoggedIn) return false;
+    try {
+      const res = await api.adoption.checkUserProfile();
+      if (res?.code === 200) {
+        return res.data?.hasProfile || false;
+      }
+      return false;
+    } catch (e) {
+      console.warn("检查领养资料失败", e);
+      return false;
+    }
+  };
+
+  const handleApply = async () => {
     if (!isLoggedIn) {
       message.info("请先登录后再提交领养申请");
       window.dispatchEvent(new Event("OPEN_LOGIN_MODAL"));
       return;
     }
-    message.info("领养申请流程将上线，敬请期待~");
+    if (pet?.status !== "AVAILABLE") {
+      message.warning("该宠物当前不可领养");
+      return;
+    }
+
+    // 检查用户是否填写了领养资料
+    const hasProfile = await checkUserProfile();
+    if (!hasProfile) {
+      modal.confirm({
+        title: "提示",
+        content:
+          "您尚未填写领养资料，请先填写领养资料后再提交申请。是否前往填写？",
+        okText: "前往填写",
+        cancelText: "取消",
+        onOk: () => {
+          navigate("/settings/adoption-profile");
+        },
+      });
+      return;
+    }
+
+    setApplyModalVisible(true);
+  };
+
+  const handleSubmitApplication = async () => {
+    if (!pet?.id || !pet?.orgId) {
+      message.error("宠物信息不完整，无法提交申请");
+      return;
+    }
+    setApplying(true);
+    try {
+      const res = await api.adoption.submitAdoption({
+        petId: pet.id,
+        orgId: pet.orgId,
+      });
+      if (res?.code === 200) {
+        message.success("领养申请已提交，请等待审核");
+        setApplyModalVisible(false);
+        // 刷新宠物信息，状态可能已更新
+        fetchDetail();
+      } else {
+        // 检查是否是重复申请的错误
+        if (res?.message && res.message.includes("重复申请")) {
+          message.warning(res.message);
+        } else {
+          message.error(res?.message || "提交申请失败");
+        }
+      }
+    } catch (error) {
+      // 检查是否是重复申请的错误
+      if (error?.message && error.message.includes("重复申请")) {
+        message.warning(error.message);
+      } else {
+        message.error(error?.message || "提交申请失败，请稍后重试");
+      }
+    } finally {
+      setApplying(false);
+    }
   };
 
   // 反馈上传已移除，保留展示逻辑
@@ -284,8 +362,9 @@ export default function PetDetail() {
                   icon={<CheckCircleOutlined />}
                   size="large"
                   onClick={handleApply}
+                  disabled={pet?.status !== "AVAILABLE"}
                 >
-                  申请领养
+                  {pet?.status === "AVAILABLE" ? "申请领养" : "暂不可领养"}
                 </Button>
                 <Button
                   size="large"
@@ -371,6 +450,11 @@ export default function PetDetail() {
                       const createdAt = item.createdAt
                         ? new Date(item.createdAt).toLocaleString()
                         : "--";
+                      const avatarUrl = item.avatarUrl
+                        ? item.avatarUrl.startsWith("http")
+                          ? item.avatarUrl
+                          : `/files/${item.avatarUrl}`
+                        : null;
                       return (
                         <List.Item>
                           <Space
@@ -379,8 +463,17 @@ export default function PetDetail() {
                             style={{ width: "100%" }}
                           >
                             <Space align="center" size={12}>
-                              <SmileOutlined style={{ color: "#faad14" }} />
-                              <Text strong>ID: {item.userId}</Text>
+                              <Avatar
+                                src={avatarUrl}
+                                icon={!avatarUrl && <SmileOutlined />}
+                                size="default"
+                              />
+                              <Text strong>
+                                {item.username || `用户${item.userId}`}
+                              </Text>
+                              {item.petName && (
+                                <Tag color="blue">宠物：{item.petName}</Tag>
+                              )}
                               <Text type="secondary">{createdAt}</Text>
                             </Space>
                             <Paragraph style={{ marginBottom: 8 }}>
@@ -418,6 +511,29 @@ export default function PetDetail() {
           },
         ]}
       />
+
+      <Modal
+        title="提交领养申请"
+        open={applyModalVisible}
+        onCancel={() => setApplyModalVisible(false)}
+        onOk={handleSubmitApplication}
+        okText="确认提交"
+        okButtonProps={{ loading: applying }}
+        cancelText="取消"
+      >
+        <div style={{ padding: "16px 0" }}>
+          <Paragraph>
+            您即将为 <Text strong>{pet?.name || "该宠物"}</Text> 提交领养申请。
+          </Paragraph>
+          <Paragraph type="secondary">
+            提交后，机构管理员将审核您的申请。审核通过后，平台将进行复审。
+            请确保您已准备好相关证明材料。
+          </Paragraph>
+          <Paragraph type="warning" style={{ marginTop: 16 }}>
+            提示：提交申请后，请耐心等待审核结果。您可以在"领养记录"中查看申请状态。
+          </Paragraph>
+        </div>
+      </Modal>
     </div>
   );
 }

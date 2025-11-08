@@ -89,3 +89,24 @@ export function getPetFeedbacksByType(type) {
 export function getWishlistPets() {
   return http.get(`/pets/wishlist`);
 }
+
+// C端用户上传健康状态
+export function updatePetHealthByOwner(petId, payload) {
+  return http.post(`/pets/${petId}/health/owner`, payload);
+}
+
+// B端：查询逾期未更新健康状态的宠物
+export function getOverduePets(orgId, daysSinceUpdate = 30) {
+  return http.get("/pets/health/overdue", {
+    params: { orgId, daysSinceUpdate },
+  });
+}
+
+// B端：发送逾期提醒通知
+export function sendOverdueReminder(petId, applicantId, daysOverdue) {
+  return http.post("/pets/health/remind-overdue", {
+    petId,
+    applicantId,
+    daysOverdue,
+  });
+}

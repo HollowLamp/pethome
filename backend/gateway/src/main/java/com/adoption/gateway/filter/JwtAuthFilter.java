@@ -162,6 +162,94 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 return exchange.getResponse().setComplete();
             }
 
+            // ==== RBAC interview模块 ====
+            // POST /interview/adoptions/{id}/interview/request - 用户提交面谈预约请求
+            if (path.matches("^/interview/adoptions/\\d+/interview/request$") && requestMethod.equals("POST")) {
+                // 需要登录，但不需要特定角色
+                // 已在前面检查了登录状态
+            }
+
+            // GET /interview/adoptions/{id}/interview - 机构管理员查看预约请求
+            if (path.matches("^/interview/adoptions/\\d+/interview$") && requestMethod.equals("GET")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：查看预约请求需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /interview/adoptions/{id}/interview/confirm - 机构管理员确认面谈
+            if (path.matches("^/interview/adoptions/\\d+/interview/confirm$") && requestMethod.equals("POST")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：确认面谈需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /interview/adoptions/{id}/interview/complete - 机构管理员完成面谈
+            if (path.matches("^/interview/adoptions/\\d+/interview/complete$") && requestMethod.equals("POST")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：完成面谈需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /interview/adoptions/{id}/handover/complete - 机构管理员完成交接
+            if (path.matches("^/interview/adoptions/\\d+/handover/complete$") && requestMethod.equals("POST")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：完成交接需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // GET /interview/slots - 机构管理员获取时段列表
+            if (path.equals("/interview/slots") && requestMethod.equals("GET")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：获取时段列表需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // POST /interview/slots - 机构管理员创建时段
+            if (path.equals("/interview/slots") && requestMethod.equals("POST")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：创建时段需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // PUT /interview/slots/{id} - 机构管理员更新时段
+            if (path.matches("^/interview/slots/\\d+$") && requestMethod.equals("PUT")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：更新时段需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // DELETE /interview/slots/{id} - 机构管理员删除时段
+            if (path.matches("^/interview/slots/\\d+$") && requestMethod.equals("DELETE")
+                    && !roles.contains("ORG_ADMIN")) {
+                System.out.println("[网关-interview] 权限不足：删除时段需要 ORG_ADMIN 角色，用户ID=" + userId);
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            // GET /interview/adoptions/{id}/slots - 用户获取可用时段（需要登录）
+            if (path.matches("^/interview/adoptions/\\d+/slots$") && requestMethod.equals("GET")) {
+                // 需要登录，但不需要特定角色，已在前面检查了登录状态
+            }
+
+            // ==== RBAC notification模块 ====
+            // 所有 /notification/** 路径都需要登录，但不需要特定角色
+            // C端用户消息接口：/notification/me/messages/**
+            if (path.startsWith("/notification/me/messages")) {
+                // 需要登录，但不需要特定角色，已在前面检查了登录状态
+            }
+
+            // B端用户消息接口：/notification/org/messages/**
+            if (path.startsWith("/notification/org/messages")) {
+                // 需要登录，但不需要特定角色，已在前面检查了登录状态
+            }
+
             // ==== RBAC xx模块 ====
 
             // 把用户信息透传下去（如果子服务需要知道是谁）

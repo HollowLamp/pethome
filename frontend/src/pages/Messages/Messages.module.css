@@ -1,0 +1,70 @@
+.messagesContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.messagesHeader {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.messagesHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.messageTabs {
+  margin-top: 16px;
+}
+
+.messageTabs :global(.ant-tabs-tab) {
+  font-size: 16px;
+}
+
+.messageTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.messageContent {
+  color: #595959;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.messageTime {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.unreadItem {
+  background-color: #f6ffed;
+  border-left: 3px solid #52c41a;
+  padding-left: 16px !important;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.readItem {
+  background-color: #fafafa;
+  padding-left: 16px !important;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.unreadItem:hover,
+.readItem:hover {
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+

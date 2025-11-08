@@ -12,7 +12,7 @@ import {
   List,
   Tag,
   Typography,
-  message,
+  App as AntdApp,
 } from "antd";
 import { ReloadOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import api from "../../../api";
@@ -29,19 +29,21 @@ const parseVaccine = (value) => {
       return parsed.filter(Boolean);
     }
     return [];
-  } catch (error) {
+  } catch {
     return [];
   }
 };
 
 export default function PetHealth() {
+  const { message } = AntdApp.useApp();
   const { user } = useAuthStore();
-  const orgId = user?.orgId;
+  const userId = user?.id || user?.userId;
+  const [orgId, setOrgId] = useState(null);
 
   const [form] = Form.useForm();
   const [petOptions, setPetOptions] = useState([]);
   const [selectedPetId, setSelectedPetId] = useState();
-  const [health, setHealth] = useState(null);
+  const [, setHealth] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -63,6 +65,7 @@ export default function PetHealth() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, selectedPetId]);
 
   const fetchHealth = useCallback(
@@ -96,6 +99,7 @@ export default function PetHealth() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [form]
   );
 
@@ -119,11 +123,49 @@ export default function PetHealth() {
     } finally {
       setHistoryLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 获取用户所属的机构ID
+  const fetchUserMemberships = async () => {
+    if (!userId) {
+      setOrgId(null);
+      return;
+    }
+    try {
+      const res = await api.org.getUserMemberships(userId);
+      if (res?.code === 200) {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.list || res.data?.memberships || [];
+        const firstOrg = list
+          .map((item) => {
+            const org = item.organizationId ? item : item.org || item;
+            return org.orgId || org.organizationId || org.id;
+          })
+          .filter(Boolean)[0];
+        if (firstOrg) {
+          setOrgId(firstOrg);
+        } else {
+          setOrgId(null);
+        }
+      } else {
+        setOrgId(null);
+      }
+    } catch (e) {
+      console.warn("获取用户机构列表失败", e);
+      setOrgId(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserMemberships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
     fetchPetOptions();
-  }, [fetchPetOptions]);
+  }, [fetchPetOptions, orgId]);
 
   useEffect(() => {
     if (selectedPetId) {

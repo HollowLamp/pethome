@@ -8,6 +8,8 @@ import com.adoption.common.api.ApiResponse;
 import com.adoption.common.constant.RoleEnum;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,11 +21,14 @@ import java.util.*;
 
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UserMapper userMapper;
     private final UserRoleMapper roleMapper;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final StringRedisTemplate stringRedisTemplate;
     private final MailService mailService;
+    private final NotificationMessageService notificationMessageService;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -32,11 +37,13 @@ public class AuthService {
     private long jwtExpiration;
 
     public AuthService(UserMapper userMapper, UserRoleMapper roleMapper,
-                       StringRedisTemplate stringRedisTemplate, MailService mailService) {
+                       StringRedisTemplate stringRedisTemplate, MailService mailService,
+                       NotificationMessageService notificationMessageService) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.stringRedisTemplate = stringRedisTemplate;
         this.mailService = mailService;
+        this.notificationMessageService = notificationMessageService;
     }
 
     /**
@@ -72,6 +79,20 @@ public class AuthService {
 
         // 注册成功后删除验证码
         stringRedisTemplate.delete(key);
+
+        // 发送 RabbitMQ 消息：发送欢迎消息给新注册用户
+        // 业务逻辑：用户注册成功后，发送欢迎消息
+        try {
+            notificationMessageService.sendSystemNotification(
+                    user.getId(),
+                    "欢迎加入宠物领养平台！",
+                    String.format("欢迎 %s！感谢您注册宠物领养平台。您可以浏览宠物列表、提交领养申请、参与社区互动等。祝您找到心仪的宠物伙伴！", user.getUsername()),
+                    "USER_WELCOME"
+            );
+        } catch (Exception e) {
+            // 消息发送失败不影响注册流程，只记录日志
+            log.warn("发送欢迎消息失败: userId={}, error={}", user.getId(), e.getMessage());
+        }
 
         return ApiResponse.success("注册成功");
     }

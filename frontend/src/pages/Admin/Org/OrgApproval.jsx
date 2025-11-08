@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   Button,
-  message,
+  App as AntdApp,
   Typography,
   Space,
   Table,
@@ -21,6 +21,7 @@ import api from "../../../api";
 const { Title, Paragraph } = Typography;
 
 export default function OrgApproval() {
+  const { message } = AntdApp.useApp();
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(false);
   const [reasonVisible, setReasonVisible] = useState(false);

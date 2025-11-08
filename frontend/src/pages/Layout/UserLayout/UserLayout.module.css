@@ -1,9 +1,14 @@
 .header {
-  margin: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  margin: 0;
+  padding: 10px 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 50px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
 }
 
 .right {
@@ -68,4 +73,8 @@
 
 .menuActive::after {
   transform: scaleX(1);
+}
+
+.hasUnread {
+  font-weight: 600;
 }

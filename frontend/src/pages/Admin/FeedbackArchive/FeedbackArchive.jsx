@@ -8,7 +8,7 @@ import {
   List,
   Tag,
   Empty,
-  message,
+  App as AntdApp,
 } from "antd";
 import { ReloadOutlined, FileTextOutlined, LinkOutlined } from "@ant-design/icons";
 import api from "../../../api";
@@ -31,6 +31,7 @@ const parseMediaUrls = (value) => {
 };
 
 export default function FeedbackArchive() {
+  const { message } = AntdApp.useApp();
   const { user } = useAuthStore();
   const orgId = user?.orgId;
 

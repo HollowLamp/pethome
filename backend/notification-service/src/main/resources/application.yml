@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: notification-service
+  config:
+    import: configserver:http://localhost:8888
+
+server:
+  port: 8086
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true  # 数据库下划线映射为 Java 驼峰

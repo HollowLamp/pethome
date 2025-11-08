@@ -10,6 +10,7 @@ import com.adoption.org.entity.OrgMember;
 import com.adoption.org.repository.OrganizationMapper;
 import com.adoption.org.repository.OrgMemberMapper;
 import com.adoption.org.service.OrgService;
+import com.adoption.org.service.NotificationMessageService;
 import com.adoption.org.event.OrgEvent;
 import com.adoption.org.event.OrgEventPublisher;
 import com.adoption.org.feign.AuthServiceClient;
@@ -41,16 +42,19 @@ public class OrgServiceImpl implements OrgService {
     private final OrgMemberMapper orgMemberMapper;
     private final OrgEventPublisher eventPublisher;
     private final AuthServiceClient authServiceClient;
+    private final NotificationMessageService notificationMessageService;
 
     // 构造注入 mapper
     public OrgServiceImpl(OrganizationMapper organizationMapper,
                           OrgMemberMapper orgMemberMapper,
                           OrgEventPublisher eventPublisher,
-                          AuthServiceClient authServiceClient) {
+                          AuthServiceClient authServiceClient,
+                          NotificationMessageService notificationMessageService) {
         this.organizationMapper = organizationMapper;
         this.orgMemberMapper = orgMemberMapper;
         this.eventPublisher = eventPublisher; // 注入事件发布器
         this.authServiceClient = authServiceClient;
+        this.notificationMessageService = notificationMessageService;
     }
 
     @Override
@@ -81,7 +85,21 @@ public class OrgServiceImpl implements OrgService {
         Long orgId = org.getId(); // 取到新机构ID（依赖 @Options(useGeneratedKeys=true)）
         eventPublisher.publish(OrgEvent.ORG_APPLIED, orgId); // 发布 "提交入驻" 事件
 
-        // 7）返回成功
+        // 7）发送 RabbitMQ 消息：通知审核员（AUDITOR）有新机构申请
+        // 业务逻辑：机构管理员提交入驻申请后，需要通知审核员进行审核
+        try {
+            notificationMessageService.sendSystemNotificationToRole(
+                    "AUDITOR",
+                    "新的机构入驻申请",
+                    String.format("收到新的机构入驻申请：%s（ID: %d），请及时审核", org.getName(), orgId),
+                    "ORG_APPLIED"
+            );
+        } catch (Exception e) {
+            // 消息发送失败不影响主流程
+            log.warn("发送机构申请通知失败: orgId={}, error={}", orgId, e.getMessage());
+        }
+
+        // 8）返回成功
         return ApiResponse.success("提交成功，等待审核");
     }
 
@@ -117,6 +135,21 @@ public class OrgServiceImpl implements OrgService {
         // 5. 发布 event.org.approved
         eventPublisher.publish(OrgEvent.ORG_APPROVED, orgId);
 
+        // 6. 发送 RabbitMQ 消息：通知机构创建者审核已通过
+        // 业务逻辑：审核员审核通过后，通知机构创建者
+        if (org.getCreatedBy() != null) {
+            try {
+                notificationMessageService.sendSystemNotification(
+                        org.getCreatedBy(),
+                        "机构入驻申请已通过",
+                        String.format("恭喜！您的机构「%s」（ID: %d）入驻申请已通过审核，您现在可以开始使用机构功能了。", org.getName(), orgId),
+                        "ORG_APPROVED"
+                );
+            } catch (Exception e) {
+                log.warn("发送机构审核通过通知失败: orgId={}, createdBy={}, error={}", orgId, org.getCreatedBy(), e.getMessage());
+            }
+        }
+
         return ApiResponse.success("审核通过，机构创建者已成为 ORG_ADMIN");
     }
 
@@ -146,6 +179,27 @@ public class OrgServiceImpl implements OrgService {
 
         // 5）event.org.rejected
         eventPublisher.publish(OrgEvent.ORG_REJECTED, orgId);
+
+        // 6. 发送 RabbitMQ 消息：通知机构创建者审核已拒绝
+        // 业务逻辑：审核员审核拒绝后，通知机构创建者
+        if (org.getCreatedBy() != null) {
+            try {
+                String body = String.format("您的机构「%s」（ID: %d）入驻申请未通过审核", org.getName(), orgId);
+                if (request.getReason() != null && !request.getReason().isEmpty()) {
+                    body += "，原因：" + request.getReason();
+                }
+                body += "。如有疑问，请联系平台客服。";
+
+                notificationMessageService.sendSystemNotification(
+                        org.getCreatedBy(),
+                        "机构入驻申请未通过",
+                        body,
+                        "ORG_REJECTED"
+                );
+            } catch (Exception e) {
+                log.warn("发送机构审核拒绝通知失败: orgId={}, createdBy={}, error={}", orgId, org.getCreatedBy(), e.getMessage());
+            }
+        }
 
         return ApiResponse.success("审核已拒绝");
     }
@@ -189,6 +243,20 @@ public class OrgServiceImpl implements OrgService {
         // 4. 插入数据库
         orgMemberMapper.insert(member);
 
+        // 5. 发送 RabbitMQ 消息：通知被添加的成员
+        // 业务逻辑：机构管理员添加成员后，通知被添加的成员
+        try {
+            String orgName = org != null ? org.getName() : "机构";
+            notificationMessageService.sendSystemNotification(
+                    request.getUserId(),
+                    "您已被添加到机构",
+                    String.format("您已被添加到机构「%s」（ID: %d），现在可以参与机构的相关操作了。", orgName, orgId),
+                    "ORG_MEMBER_ADDED"
+            );
+        } catch (Exception e) {
+            log.warn("发送成员添加通知失败: orgId={}, userId={}, error={}", orgId, request.getUserId(), e.getMessage());
+        }
+
         return ApiResponse.success("成员添加成功");
     }
 
@@ -204,6 +272,21 @@ public class OrgServiceImpl implements OrgService {
 
         // 2. 执行删除
         orgMemberMapper.deleteByOrgIdAndUserId(orgId, userId);
+
+        // 3. 发送 RabbitMQ 消息：通知被删除的成员
+        // 业务逻辑：机构管理员删除成员后，通知被删除的成员
+        try {
+            Organization org = organizationMapper.findById(orgId);
+            String orgName = org != null ? org.getName() : "机构";
+            notificationMessageService.sendSystemNotification(
+                    userId,
+                    "您已被移出机构",
+                    String.format("您已被移出机构「%s」（ID: %d），不再拥有该机构的操作权限。", orgName, orgId),
+                    "ORG_MEMBER_REMOVED"
+            );
+        } catch (Exception e) {
+            log.warn("发送成员删除通知失败: orgId={}, userId={}, error={}", orgId, userId, e.getMessage());
+        }
 
         return ApiResponse.success("成员删除成功");
     }

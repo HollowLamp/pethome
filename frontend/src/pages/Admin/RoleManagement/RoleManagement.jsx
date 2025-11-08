@@ -8,7 +8,7 @@ import {
   Form,
   Select,
   Input,
-  message,
+  App as AntdApp,
   Typography,
   Card,
 } from "antd";
@@ -52,6 +52,7 @@ const ROLE_COLORS = {
 };
 
 export default function RoleManagement() {
+  const { message } = AntdApp.useApp();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({

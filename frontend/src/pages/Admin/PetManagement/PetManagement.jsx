@@ -11,7 +11,7 @@ import {
   Select,
   InputNumber,
   Upload,
-  message,
+  App as AntdApp,
   Divider,
   Typography,
 } from "antd";
@@ -74,6 +74,7 @@ const TYPE_COLOR_MAP = {
 };
 
 export default function PetManagement() {
+  const { message } = AntdApp.useApp();
   const { user } = useAuthStore();
   const userId = user?.id || user?.userId;
 

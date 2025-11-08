@@ -3,10 +3,12 @@ package com.adoption.adoption;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableDiscoveryClient  // 开启 Eureka 注册
+@EnableFeignClients  // 开启 Feign 客户端
 @ComponentScan(basePackages = {"com.adoption.adoption", "com.adoption.common"})
 public class AdoptionServiceApplication {
     public static void main(String[] args) {

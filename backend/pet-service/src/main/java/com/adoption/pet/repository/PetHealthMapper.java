@@ -17,7 +17,7 @@ public interface PetHealthMapper {
     List<PetHealth> findAllByPetId(Long petId);
 
     @Insert("INSERT INTO pet_health (pet_id, weight, vaccine, note, updated_by, updated_at) " +
-            "VALUES (#{petId}, #{weight}, #{vaccine}, #{note}, #{updatedBy}, NOW())")
+            "VALUES (#{petId}, #{weight}, #{vaccine}, #{note}, #{updatedBy}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(PetHealth petHealth);
 

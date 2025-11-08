@@ -1,0 +1,7 @@
+# interview-service 配置
+server:
+  port: 8085
+
+spring:
+  application:
+    name: interview-service

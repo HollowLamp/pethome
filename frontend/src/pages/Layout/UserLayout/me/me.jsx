@@ -220,8 +220,7 @@ export default function Me() {
       label: "设置领养资料",
       icon: <FileTextOutlined />,
       onClick: () => {
-        // TODO: 实现领养资料设置页面
-        message.info("领养资料设置功能开发中");
+        navigate("/settings/adoption-profile");
       },
     },
     {

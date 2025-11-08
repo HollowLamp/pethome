@@ -4,6 +4,7 @@ import com.adoption.common.api.ApiResponse;
 import com.adoption.common.service.FileService;
 import com.adoption.common.util.FileUtils;
 import com.adoption.pet.model.PetFeedback;
+import com.adoption.pet.model.PetFeedbackDTO;
 import com.adoption.pet.service.PetFeedbackService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +35,7 @@ public class PetFeedbackController {
      * GET /pets/{id}/feedbacks
      */
     @GetMapping("/{id}/feedbacks")
-    public ApiResponse<List<PetFeedback>> getFeedbacks(
+    public ApiResponse<List<PetFeedbackDTO>> getFeedbacks(
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @PathVariable("id") Long petId) {
         return petFeedbackService.getFeedbacks(petId);
@@ -91,7 +92,7 @@ public class PetFeedbackController {
      * GET /pets/type/{type}/feedbacks
      */
     @GetMapping("/type/{type}/feedbacks")
-    public ApiResponse<List<PetFeedback>> getFeedbacksByType(
+    public ApiResponse<List<PetFeedbackDTO>> getFeedbacksByType(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable("type") String type) {
         return petFeedbackService.getFeedbacksByType(type);

@@ -38,7 +38,12 @@ public interface AdoptionAppMapper {
     @Update("UPDATE adoption_app SET status = 'APPROVED', updated_at = #{updatedAt} WHERE id = #{id}")
     int updateToAdopted(Long id);
 
-    // 查询已领养的宠物（状态为 "PLATFORM_APPROVED 平台管理员审核通过"）
-    @Select("SELECT * FROM adoption_app WHERE applicant_id = #{applicantId} AND status = 'PLATFORM_APPROVED'")
+    // 查询已领养的宠物（状态为 "COMPLETED 已完成交接"）
+    @Select("SELECT * FROM adoption_app WHERE applicant_id = #{applicantId} AND status = 'COMPLETED'")
     List<AdoptionApp> selectAdoptedPets(Long applicantId);
+
+    // 检查是否存在重复申请（同一用户对同一宠物的未完成申请）
+    @Select("SELECT COUNT(*) > 0 FROM adoption_app WHERE applicant_id = #{applicantId} AND pet_id = #{petId} " +
+            "AND status NOT IN ('ORG_REJECTED', 'PLATFORM_REJECTED', 'COMPLETED')")
+    boolean existsPendingApplication(@Param("applicantId") Long applicantId, @Param("petId") Long petId);
 }

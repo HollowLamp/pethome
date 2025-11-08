@@ -5,7 +5,7 @@ import {
   Select,
   Empty,
   Skeleton,
-  message,
+  App as AntdApp,
   Button,
   Space,
 } from "antd";
@@ -43,6 +43,7 @@ const STATUS_OPTIONS = [
 const PAGE_SIZE = 12;
 
 export default function PetExplore() {
+  const { message } = AntdApp.useApp();
   const navigate = useNavigate();
   const { isLoggedIn } = useAuthStore();
 

@@ -26,7 +26,7 @@ eureka:
 
 jwt:
   secret: my-super-secret-key-my-super-secret-key-1234567890abcdef
-  expiration: 3600000 # 1小时，单位毫秒
+  expiration: 86400000 # 24小时，单位毫秒
 
 # 文件服务配置
 file:

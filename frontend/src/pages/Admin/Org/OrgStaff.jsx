@@ -7,7 +7,7 @@ import {
   Modal,
   Form,
   InputNumber,
-  message,
+  App as AntdApp,
   Typography,
   Empty,
   Select,
@@ -23,6 +23,7 @@ import useAuthStore from "../../../store/authStore";
 const { Title, Text } = Typography;
 
 export default function OrgStaff() {
+  const { message } = AntdApp.useApp();
   const { user } = useAuthStore();
   const userId = user?.id || user?.userId;
 

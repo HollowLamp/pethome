@@ -38,6 +38,16 @@ export default function Dashboard() {
     totalUsersLoading: false,
     orgPetsCount: 0,
     orgPetsLoading: false,
+    // Adoption 相关统计数据
+    pendingAdoptionApps: 0, // 待审核用户申请（初审）- PENDING
+    pendingAdoptionAppsLoading: false,
+    pendingReviewApps: 0, // 待审核领养申请（复审）- ORG_APPROVED
+    pendingReviewAppsLoading: false,
+    pendingHandoverApps: 0, // 待确认领养交接 - PLATFORM_APPROVED
+    pendingHandoverAppsLoading: false,
+    // Interview 相关统计数据
+    pendingInterviewRequests: 0, // 待安排面谈 - 状态为 REQUESTED
+    pendingInterviewRequestsLoading: false,
   });
 
   // 获取用户角色
@@ -232,6 +242,176 @@ export default function Dashboard() {
     fetchMembers();
   }, [selectedOrgId, roleSet]);
 
+  // 获取待审核用户申请（初审）- 机构管理员
+  useEffect(() => {
+    if (!selectedOrgId || !roleSet.has("ORG_ADMIN")) {
+      setStatsData((prev) => ({ ...prev, pendingAdoptionApps: 0 }));
+      return;
+    }
+    const fetchPendingAdoptionApps = async () => {
+      setStatsData((prev) => ({ ...prev, pendingAdoptionAppsLoading: true }));
+      try {
+        const res = await api.adoption.getPendingApplications("PENDING");
+        if (res?.code === 200) {
+          const list = Array.isArray(res.data)
+            ? res.data
+            : res.data?.list || [];
+          setStatsData((prev) => ({
+            ...prev,
+            pendingAdoptionApps: list.length,
+          }));
+        }
+      } catch (e) {
+        console.warn("获取待审核用户申请失败", e);
+      } finally {
+        setStatsData((prev) => ({
+          ...prev,
+          pendingAdoptionAppsLoading: false,
+        }));
+      }
+    };
+    fetchPendingAdoptionApps();
+  }, [selectedOrgId, roleSet]);
+
+  // 获取待审核领养申请（复审）- 审核员
+  useEffect(() => {
+    if (!roleSet.has("AUDITOR")) {
+      setStatsData((prev) => ({ ...prev, pendingReviewApps: 0 }));
+      return;
+    }
+    const fetchPendingReviewApps = async () => {
+      setStatsData((prev) => ({ ...prev, pendingReviewAppsLoading: true }));
+      try {
+        const res = await api.adoption.getPendingApplications("ORG_APPROVED");
+        if (res?.code === 200) {
+          const list = Array.isArray(res.data)
+            ? res.data
+            : res.data?.list || [];
+          setStatsData((prev) => ({
+            ...prev,
+            pendingReviewApps: list.length,
+          }));
+        }
+      } catch (e) {
+        console.warn("获取待审核领养申请（复审）失败", e);
+      } finally {
+        setStatsData((prev) => ({
+          ...prev,
+          pendingReviewAppsLoading: false,
+        }));
+      }
+    };
+    fetchPendingReviewApps();
+  }, [roleSet]);
+
+  // 获取待安排面谈 - 机构管理员
+  useEffect(() => {
+    if (!selectedOrgId || !roleSet.has("ORG_ADMIN")) {
+      setStatsData((prev) => ({ ...prev, pendingInterviewRequests: 0 }));
+      return;
+    }
+    const fetchPendingInterviewRequests = async () => {
+      setStatsData((prev) => ({
+        ...prev,
+        pendingInterviewRequestsLoading: true,
+      }));
+      try {
+        // 获取平台已通过的申请
+        const res = await api.adoption.getPendingApplications(
+          "PLATFORM_APPROVED"
+        );
+        if (res?.code === 200) {
+          const list = Array.isArray(res.data)
+            ? res.data
+            : res.data?.list || [];
+          // 为每个申请获取面谈信息，统计状态为 REQUESTED 的数量
+          let count = 0;
+          await Promise.all(
+            list.map(async (app) => {
+              try {
+                const interviewRes = await api.interview.getInterviewRequest(
+                  app.id
+                );
+                if (
+                  interviewRes?.code === 200 &&
+                  interviewRes.data?.status === "REQUESTED"
+                ) {
+                  count++;
+                }
+              } catch {
+                // 如果没有面谈预约，忽略
+              }
+            })
+          );
+          setStatsData((prev) => ({
+            ...prev,
+            pendingInterviewRequests: count,
+          }));
+        }
+      } catch (e) {
+        console.warn("获取待安排面谈失败", e);
+      } finally {
+        setStatsData((prev) => ({
+          ...prev,
+          pendingInterviewRequestsLoading: false,
+        }));
+      }
+    };
+    fetchPendingInterviewRequests();
+  }, [selectedOrgId, roleSet]);
+
+  // 获取待确认领养交接 - 机构管理员
+  useEffect(() => {
+    if (!selectedOrgId || !roleSet.has("ORG_ADMIN")) {
+      setStatsData((prev) => ({ ...prev, pendingHandoverApps: 0 }));
+      return;
+    }
+    const fetchPendingHandoverApps = async () => {
+      setStatsData((prev) => ({ ...prev, pendingHandoverAppsLoading: true }));
+      try {
+        const res = await api.adoption.getPendingApplications(
+          "PLATFORM_APPROVED"
+        );
+        if (res?.code === 200) {
+          const list = Array.isArray(res.data)
+            ? res.data
+            : res.data?.list || [];
+          // 为每个申请获取面谈信息，只统计已完成面谈的申请
+          let count = 0;
+          await Promise.all(
+            list.map(async (app) => {
+              try {
+                const interviewRes = await api.interview.getInterviewRequest(
+                  app.id
+                );
+                if (
+                  interviewRes?.code === 200 &&
+                  interviewRes.data?.status === "DONE"
+                ) {
+                  count++;
+                }
+              } catch {
+                // 如果没有面谈预约或面谈未完成，不统计
+              }
+            })
+          );
+          setStatsData((prev) => ({
+            ...prev,
+            pendingHandoverApps: count,
+          }));
+        }
+      } catch (e) {
+        console.warn("获取待确认领养交接失败", e);
+      } finally {
+        setStatsData((prev) => ({
+          ...prev,
+          pendingHandoverAppsLoading: false,
+        }));
+      }
+    };
+    fetchPendingHandoverApps();
+  }, [selectedOrgId, roleSet]);
+
   const statistics = useMemo(() => {
     const stats = [];
 
@@ -247,10 +427,10 @@ export default function Dashboard() {
         },
         {
           title: "待审核申请",
-          value: 0,
+          value: statsData.pendingReviewApps,
           icon: <CheckCircleOutlined />,
           color: "#52c41a",
-          // TODO: 待开发 - 领养申请审核接口
+          loading: statsData.pendingReviewAppsLoading,
         },
         {
           title: "待处理申诉",
@@ -288,10 +468,10 @@ export default function Dashboard() {
         },
         {
           title: "待审核领养申请（复审）",
-          value: 0,
+          value: statsData.pendingReviewApps,
           icon: <CheckCircleOutlined />,
           color: "#52c41a",
-          // TODO: 待开发 - 领养申请复审接口
+          loading: statsData.pendingReviewAppsLoading,
         }
       );
     }
@@ -328,24 +508,24 @@ export default function Dashboard() {
       stats.push(
         {
           title: "待审核用户申请（初审）",
-          value: 0,
+          value: statsData.pendingAdoptionApps,
           icon: <CheckCircleOutlined />,
           color: "#52c41a",
-          // TODO: 待开发 - 用户申请初审接口
+          loading: statsData.pendingAdoptionAppsLoading,
         },
         {
           title: "待安排面谈",
-          value: 0,
+          value: statsData.pendingInterviewRequests,
           icon: <CalendarOutlined />,
           color: "#1890ff",
-          // TODO: 待开发 - 面谈安排接口
+          loading: statsData.pendingInterviewRequestsLoading,
         },
         {
           title: "待确认领养交接",
-          value: 0,
+          value: statsData.pendingHandoverApps,
           icon: <FileTextOutlined />,
           color: "#faad14",
-          // TODO: 待开发 - 领养交接确认接口
+          loading: statsData.pendingHandoverAppsLoading,
         },
         {
           title: "机构成员总数",

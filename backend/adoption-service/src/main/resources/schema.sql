@@ -1,5 +1,5 @@
 -- 创建宠物领养申请表
-CREATE TABLE adoption_app (
+CREATE TABLE IF NOT EXISTS adoption_app (
     id BIGINT AUTO_INCREMENT COMMENT '主键ID',
     pet_id BIGINT NOT NULL COMMENT '宠物ID',
     applicant_id BIGINT NOT NULL COMMENT '申请人ID',
@@ -18,10 +18,10 @@ CREATE TABLE adoption_app (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='宠物领养申请记录表';
 
 -- 创建领养材料上传记录表
-CREATE TABLE adoption_doc (
+CREATE TABLE IF NOT EXISTS adoption_doc (
     id BIGINT AUTO_INCREMENT COMMENT '主键ID',
-    app_id BIGINT NOT NULL COMMENT '关联的申请ID',
-    doc_type VARCHAR(32) NOT NULL COMMENT '材料类型，如：ID_CARD, INCOME_PROOF, PET_HISTORY 等',
+    app_id BIGINT NULL COMMENT '关联的申请ID，NULL表示用户资料而非申请材料',
+    doc_type VARCHAR(64) NOT NULL COMMENT '材料类型，如：ID_CARD, INCOME_PROOF, PET_HISTORY 等。用户资料格式：USER_{userId}_{docType}',
     url VARCHAR(255) NOT NULL COMMENT '材料文件存储路径（如OSS链接）',
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
 
@@ -31,8 +31,12 @@ CREATE TABLE adoption_doc (
     KEY idx_uploaded_at (uploaded_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='领养申请相关材料上传记录表';
 
+-- 如果表已存在，需要执行以下 SQL 修改表结构（允许 app_id 为 NULL，扩展 doc_type 长度）：
+-- ALTER TABLE adoption_doc MODIFY app_id BIGINT NULL COMMENT '关联的申请ID，NULL表示用户资料而非申请材料';
+-- ALTER TABLE adoption_doc MODIFY doc_type VARCHAR(64) NOT NULL COMMENT '材料类型，如：ID_CARD, INCOME_PROOF, PET_HISTORY 等。用户资料格式：USER_{userId}_{docType}';
+
 -- 创建面谈记录表
-CREATE TABLE interview_record (
+CREATE TABLE IF NOT EXISTS interview_record (
     id BIGINT AUTO_INCREMENT COMMENT '主键ID',
     app_id BIGINT NOT NULL COMMENT '关联的申请ID',
     org_id BIGINT NOT NULL COMMENT '执行面谈的机构ID',

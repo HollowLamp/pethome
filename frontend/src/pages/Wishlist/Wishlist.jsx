@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Card, Empty, Skeleton, message, Typography } from "antd";
+import { Card, Empty, Skeleton, App as AntdApp, Typography } from "antd";
 import { useNavigate } from "react-router";
 import api from "../../api";
 import PetCard from "../Pets/components/PetCard";
@@ -7,6 +7,7 @@ import PetCard from "../Pets/components/PetCard";
 const { Title } = Typography;
 
 export default function Wishlist() {
+  const { message } = AntdApp.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [pets, setPets] = useState([]);
@@ -37,7 +38,13 @@ export default function Wishlist() {
         </Title>
       </Card>
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 24 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 24,
+          }}
+        >
           {Array.from({ length: 8 }).map((_, i) => (
             <Card key={i}>
               <Skeleton active paragraph={{ rows: 2 }} />
@@ -45,9 +52,19 @@ export default function Wishlist() {
           ))}
         </div>
       ) : pets.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 24 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 24,
+          }}
+        >
           {pets.map((pet) => (
-            <PetCard key={pet.id} pet={pet} onClick={() => navigate(`/pets/${pet.id}`)} />
+            <PetCard
+              key={pet.id}
+              pet={pet}
+              onClick={() => navigate(`/pets/${pet.id}`)}
+            />
           ))}
         </div>
       ) : (
@@ -56,5 +73,3 @@ export default function Wishlist() {
     </div>
   );
 }
-
-

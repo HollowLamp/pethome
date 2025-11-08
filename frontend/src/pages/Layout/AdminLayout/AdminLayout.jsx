@@ -9,6 +9,7 @@ import {
   Typography,
   theme,
   App as AntdApp,
+  Badge,
 } from "antd";
 import {
   MenuFoldOutlined,
@@ -35,6 +36,7 @@ import {
   CheckSquareOutlined,
 } from "@ant-design/icons";
 import useAuthStore from "../../../store/authStore";
+import api from "../../../api";
 import "./AdminLayout.module.css";
 
 const { Header, Sider, Content } = Layout;
@@ -52,14 +54,16 @@ const getMenuItems = (roles) => {
     label: "首页",
   });
 
+  // 所有角色都显示消息
+  items.push({
+    key: "/admin/messages",
+    icon: <MessageOutlined />,
+    label: "系统通知",
+  });
+
   // 超级管理员菜单
   if (roleSet.has("ADMIN")) {
     items.push(
-      {
-        key: "/admin/global-settings",
-        icon: <SettingOutlined />,
-        label: "平台全局规则",
-      },
       {
         key: "/admin/role-management",
         icon: <TeamOutlined />,
@@ -172,6 +176,7 @@ const getMenuItems = (roles) => {
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const location = useLocation();
@@ -179,7 +184,44 @@ export default function AdminLayout() {
   const { message } = AntdApp.useApp();
 
   const roles = user?.roles || [];
-  const menuItems = getMenuItems(roles);
+  const baseMenuItems = getMenuItems(roles);
+
+  // 动态更新消息菜单项的标签，添加未读提示
+  const menuItems = baseMenuItems.map((item) => {
+    if (item.key === "/admin/messages") {
+      return {
+        ...item,
+        label: (
+          <span>
+            {item.icon}
+            <span style={{ marginLeft: 8 }}>系统通知</span>
+            {unreadCount > 0 && (
+              <Badge count={unreadCount} style={{ marginLeft: 8 }} />
+            )}
+          </span>
+        ),
+      };
+    }
+    return item;
+  });
+
+  useEffect(() => {
+    // 加载未读消息数量
+    loadUnreadCount();
+    // 设置定时刷新
+    const timer = setInterval(loadUnreadCount, 30000); // 每30秒刷新一次
+    return () => clearInterval(timer);
+  }, []);
+
+  const loadUnreadCount = async () => {
+    try {
+      const res = await api.notification.getOrgSystemMessages().catch(() => ({ data: [] }));
+      const unread = (res.data || []).filter((msg) => !msg.isRead).length;
+      setUnreadCount(unread);
+    } catch (error) {
+      console.error("加载未读消息数量失败:", error);
+    }
+  };
 
   // 检查是否有B端权限
   const businessRoles = ["ADMIN", "AUDITOR", "CS", "ORG_ADMIN", "ORG_STAFF"];
@@ -266,6 +308,9 @@ export default function AdminLayout() {
       <Layout>
         <Header
           style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
             padding: "0 24px",
             background: token.colorBgContainer,
             display: "flex",
@@ -283,7 +328,28 @@ export default function AdminLayout() {
           >
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </div>
-          <Space>
+          <Space size="middle">
+            {unreadCount > 0 ? (
+              <Badge dot offset={[-2, 2]}>
+                <MessageOutlined
+                  style={{
+                    fontSize: 20,
+                    cursor: "pointer",
+                    color: location.pathname === "/admin/messages" ? token.colorPrimary : undefined,
+                  }}
+                  onClick={() => navigate("/admin/messages")}
+                />
+              </Badge>
+            ) : (
+              <MessageOutlined
+                style={{
+                  fontSize: 20,
+                  cursor: "pointer",
+                  color: location.pathname === "/admin/messages" ? token.colorPrimary : undefined,
+                }}
+                onClick={() => navigate("/admin/messages")}
+              />
+            )}
             <Text>{user?.username || "管理员"}</Text>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Avatar

@@ -34,3 +34,21 @@ spring:
             - Path=/pets/**
           filters:
             - StripPrefix=0 # 保留 /pets 前缀
+        - id: interview-service
+          uri: lb://interview-service
+          predicates:
+            - Path=/interview/**
+          filters:
+            - StripPrefix=0 # 保留 /interview 前缀
+        - id: adoption-service
+          uri: lb://adoption-service
+          predicates:
+            - Path=/adoptions/**
+          filters:
+            - StripPrefix=0 # 保留 /adoptions 前缀
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/notification/**
+          filters:
+            - StripPrefix=0 # 保留 /notification 前缀

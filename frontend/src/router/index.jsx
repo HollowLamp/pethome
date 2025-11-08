@@ -14,10 +14,19 @@ import FeedbackArchive from "../pages/Admin/FeedbackArchive/FeedbackArchive";
 import OrgApplication from "../pages/Admin/Org/OrgApplication";
 import OrgStaff from "../pages/Admin/Org/OrgStaff";
 import OrgApproval from "../pages/Admin/Org/OrgApproval";
+import AdoptionApproval from "../pages/Admin/AdoptionApproval/AdoptionApproval";
+import AdoptionReview from "../pages/Admin/AdoptionReview/AdoptionReview";
+import AdoptionConfirm from "../pages/Admin/AdoptionConfirm/AdoptionConfirm";
+import InterviewSchedule from "../pages/Admin/InterviewSchedule/InterviewSchedule";
+import PetOverdueReminder from "../pages/Admin/PetOverdueReminder/PetOverdueReminder";
 import CommunitySettings from "../pages/Settings/CommunitySettings/CommunitySettings";
+import AdoptionProfile from "../pages/Settings/AdoptionProfile/AdoptionProfile";
 import PetExplore from "../pages/Pets/Explore/PetExplore";
 import PetDetail from "../pages/Pets/Detail/PetDetail";
 import Wishlist from "../pages/Wishlist/Wishlist";
+import AdoptionRecord from "../pages/AdoptionRecord/AdoptionRecord";
+import UserMessages from "../pages/Messages/UserMessages";
+import OrgMessages from "../pages/Messages/OrgMessages";
 
 const routes = createRoutesFromElements(
   <Route path="/">
@@ -25,6 +34,12 @@ const routes = createRoutesFromElements(
       <Route index element={<PetExplore />} />
       <Route path="pets/:petId" element={<PetDetail />} />
       <Route path="wishlist" element={<Wishlist />} />
+      <Route path="adoption-record" element={<AdoptionRecord />} />
+      <Route path="messages" element={<UserMessages />} />
+      <Route path="settings">
+        <Route path="community" element={<CommunitySettings />} />
+        <Route path="adoption-profile" element={<AdoptionProfile />} />
+      </Route>
     </Route>
     <Route path="admin" element={<AdminLayout />}>
       <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -36,10 +51,13 @@ const routes = createRoutesFromElements(
       <Route path="org-application" element={<OrgApplication />} />
       <Route path="org-staff" element={<OrgStaff />} />
       <Route path="org-approval" element={<OrgApproval />} />
+      <Route path="adoption-approval" element={<AdoptionApproval />} />
+      <Route path="adoption-review" element={<AdoptionReview />} />
+      <Route path="interview-schedule" element={<InterviewSchedule />} />
+      <Route path="adoption-confirm" element={<AdoptionConfirm />} />
+      <Route path="user-reminders" element={<PetOverdueReminder />} />
+      <Route path="messages" element={<OrgMessages />} />
       {/* 其他admin子路由可以在这里添加 */}
-    </Route>
-    <Route path="settings">
-      <Route path="community" element={<CommunitySettings />} />
     </Route>
   </Route>
 );

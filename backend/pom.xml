@@ -13,7 +13,7 @@
         <module>org-service</module>
         <module>pet-service</module>
         <module>adoption-service</module>
-        <module>review-schedule-service</module>
+        <module>interview-service</module>
         <module>notification-service</module>
         <module>community-service</module>
         <module>ai-service</module>
