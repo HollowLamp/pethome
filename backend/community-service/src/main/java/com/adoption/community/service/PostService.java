@@ -1,0 +1,292 @@
+package com.adoption.community.service;
+
+import com.adoption.common.api.ApiResponse;
+import com.adoption.community.model.Post;
+import com.adoption.community.repository.PostMapper;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 帖子服务层
+ * 
+ * 作用：处理帖子相关的业务逻辑
+ * 
+ * 主要功能：
+ * - 帖子列表查询（支持类型筛选、排序、分页）
+ * - 帖子详情查询
+ * - 发布帖子
+ * - 删除帖子
+ * - 我的帖子查询
+ * - 客服审核功能（查看违规帖子、修改状态）
+ * - 管理员推荐功能
+ */
+@Service
+public class PostService {
+
+    private final PostMapper postMapper;
+
+    public PostService(PostMapper postMapper) {
+        this.postMapper = postMapper;
+    }
+
+    /**
+     * 获取帖子列表（支持类型筛选、排序、分页）
+     * 
+     * 功能说明：
+     * - 只返回状态为PUBLISHED（已发布）的帖子
+     * - 支持按类型筛选：PET_PUBLISH、DAILY、GUIDE
+     * - 支持排序：latest（最新）、popular（最热）
+     * - 支持分页查询
+     * 
+     * @param type 帖子类型（可选，null表示不筛选）
+     * @param sort 排序方式（latest-最新，popular-最热，null-默认最新）
+     * @param page 页码（从1开始，默认1）
+     * @param pageSize 每页数量（默认10，最大100）
+     * @return 包含帖子列表、总数、页码等信息的响应
+     */
+    public ApiResponse<Map<String, Object>> getPostList(String type, String sort, Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
+        if (pageSize > 100) {
+            pageSize = 100;
+        }
+
+        int offset = (page - 1) * pageSize;
+        List<Post> posts = postMapper.findAll(type, sort, null, offset, pageSize);
+        int total = postMapper.countAll(type, null);
+
+        // 为每个帖子添加点赞数（将来可以扩展Post实体添加likeCount字段）
+        // for (Post post : posts) {
+        //     int likeCount = reactionMapper.countByPostId(post.getId());
+        // }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", posts);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 获取帖子详情
+     * 
+     * 注意：只返回状态为PUBLISHED的帖子，其他状态的帖子返回404
+     * 
+     * @param id 帖子ID
+     * @return 帖子详情，如果不存在或未发布则返回错误
+     */
+    public ApiResponse<Post> getPostById(Long id) {
+        Post post = postMapper.findById(id);
+        if (post == null) {
+            return ApiResponse.error(404, "帖子不存在");
+        }
+        if (!"PUBLISHED".equals(post.getStatus())) {
+            return ApiResponse.error(404, "帖子不存在或已被删除");
+        }
+        return ApiResponse.success(post);
+    }
+
+    /**
+     * 发布帖子
+     * 
+     * 功能说明：
+     * - 验证标题和类型不能为空
+     * - 自动设置作者ID、默认状态为PUBLISHED
+     * - 自动设置aiFlagged为false、recommend为false
+     * - 插入数据库后返回包含ID的帖子对象
+     * 
+     * 注意：媒体文件URL需要先通过文件上传接口获取，然后以JSON数组格式存储在mediaUrls字段
+     * 
+     * @param post 帖子对象（需要包含title、type、content等字段）
+     * @param authorId 作者用户ID（从UserContext获取）
+     * @return 创建成功的帖子对象（包含自动生成的ID）
+     */
+    public ApiResponse<Post> createPost(Post post, Long authorId) {
+        if (post.getTitle() == null || post.getTitle().trim().isEmpty()) {
+            return ApiResponse.error(400, "标题不能为空");
+        }
+        if (post.getType() == null) {
+            return ApiResponse.error(400, "帖子类型不能为空");
+        }
+
+        post.setAuthorId(authorId);
+        if (post.getStatus() == null) {
+            post.setStatus("PUBLISHED");
+        }
+        if (post.getAiFlagged() == null) {
+            post.setAiFlagged(false);
+        }
+        if (post.getRecommend() == null) {
+            post.setRecommend(false);
+        }
+
+        postMapper.insert(post);
+        return ApiResponse.success(post);
+    }
+
+    /**
+     * 删除自己的帖子
+     * 
+     * 注意：只能删除自己发布的帖子，通过同时验证id和authorId确保安全性
+     * 
+     * @param id 帖子ID
+     * @param authorId 作者用户ID（用于验证权限）
+     * @return 删除结果
+     */
+    public ApiResponse<String> deletePost(Long id, Long authorId) {
+        Post post = postMapper.findById(id);
+        if (post == null) {
+            return ApiResponse.error(404, "帖子不存在");
+        }
+        if (!post.getAuthorId().equals(authorId)) {
+            return ApiResponse.error(403, "只能删除自己的帖子");
+        }
+
+        int deleted = postMapper.deleteByIdAndAuthorId(id, authorId);
+        if (deleted > 0) {
+            return ApiResponse.success("删除成功");
+        } else {
+            return ApiResponse.error(500, "删除失败");
+        }
+    }
+
+    /**
+     * 获取我发布的帖子（用于"我的帖子"功能）
+     * 
+     * 功能说明：
+     * - 查询指定用户发布的所有帖子（包括已发布、已删除等所有状态）
+     * - 支持分页查询
+     * - 按创建时间倒序排列
+     * 
+     * @param authorId 作者用户ID
+     * @param page 页码（从1开始，默认1）
+     * @param pageSize 每页数量（默认10，最大100）
+     * @return 包含帖子列表、总数、页码等信息的响应
+     */
+    public ApiResponse<Map<String, Object>> getMyPosts(Long authorId, Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
+        if (pageSize > 100) {
+            pageSize = 100;
+        }
+
+        int offset = (page - 1) * pageSize;
+        List<Post> posts = postMapper.findByAuthorId(authorId, offset, pageSize);
+        int total = postMapper.countByAuthorId(authorId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", posts);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 获取AI标记的违规帖子（客服审核功能）
+     * 
+     * 功能说明：
+     * - 查询所有被AI标记为违规的帖子（aiFlagged = true）
+     * - 用于客服人员审核和处理违规内容
+     * - 支持分页查询
+     * 
+     * 权限要求：需要CS（客服）角色
+     * 
+     * @param page 页码（从1开始，默认1）
+     * @param pageSize 每页数量（默认10，最大100）
+     * @return 包含违规帖子列表、总数、页码等信息的响应
+     */
+    public ApiResponse<Map<String, Object>> getFlaggedPosts(Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
+        if (pageSize > 100) {
+            pageSize = 100;
+        }
+
+        int offset = (page - 1) * pageSize;
+        List<Post> posts = postMapper.findFlaggedPosts(offset, pageSize);
+        int total = postMapper.countFlaggedPosts();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", posts);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 修改帖子状态（客服审核功能）
+     * 
+     * 功能说明：
+     * - 用于客服审核违规帖子后修改其状态
+     * - 支持的状态：PUBLISHED（恢复发布）、FLAGGED（标记违规）、REMOVED（删除）
+     * 
+     * 权限要求：需要CS（客服）角色
+     * 
+     * @param id 帖子ID
+     * @param status 新状态（PUBLISHED、FLAGGED、REMOVED）
+     * @return 更新结果
+     */
+    public ApiResponse<String> updatePostStatus(Long id, String status) {
+        Post post = postMapper.findById(id);
+        if (post == null) {
+            return ApiResponse.error(404, "帖子不存在");
+        }
+
+        if (!"PUBLISHED".equals(status) && !"FLAGGED".equals(status) && !"REMOVED".equals(status)) {
+            return ApiResponse.error(400, "无效的状态值");
+        }
+
+        postMapper.updateStatus(id, status);
+        return ApiResponse.success("状态更新成功");
+    }
+
+    /**
+     * 推荐/取消推荐帖子（超级管理员功能）
+     * 
+     * 功能说明：
+     * - 用于管理员将优质帖子推荐到首页
+     * - 如果recommend为null，则切换当前状态（推荐变不推荐，不推荐变推荐）
+     * - 如果recommend有值，则设置为指定状态
+     * 
+     * 权限要求：需要ADMIN（超级管理员）角色
+     * 
+     * @param id 帖子ID
+     * @param recommend 是否推荐（true-推荐，false-取消推荐，null-切换状态）
+     * @return 操作结果
+     */
+    public ApiResponse<String> toggleRecommend(Long id, Boolean recommend) {
+        Post post = postMapper.findById(id);
+        if (post == null) {
+            return ApiResponse.error(404, "帖子不存在");
+        }
+
+        if (recommend == null) {
+            recommend = !post.getRecommend();
+        }
+
+        postMapper.updateRecommend(id, recommend);
+        return ApiResponse.success(recommend ? "已推荐" : "已取消推荐");
+    }
+}
+

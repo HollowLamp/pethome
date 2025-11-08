@@ -1,10 +1,10 @@
-package com.adoption.interview.controller;
+package com.adoption.review.controller;
 
 import com.adoption.common.api.ApiResponse;
 import com.adoption.common.util.UserContext;
-import com.adoption.interview.feign.OrgServiceClient;
-import com.adoption.interview.model.InterviewBooking;
-import com.adoption.interview.service.InterviewService;
+import com.adoption.review.feign.OrgServiceClient;
+import com.adoption.review.model.InterviewBooking;
+import com.adoption.review.service.InterviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
