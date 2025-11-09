@@ -42,7 +42,6 @@ public class AdoptionController {
         if (currentUserId == null) {
             return null;
         }
-
         try {
             ApiResponse<Object> membershipsResponse = orgServiceClient.getMemberships(currentUserId);
             if (membershipsResponse == null || membershipsResponse.getCode() != 200) {
