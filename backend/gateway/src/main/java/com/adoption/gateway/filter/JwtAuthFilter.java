@@ -32,10 +32,18 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             !path.contains("/feedbacks") &&
             !path.startsWith("/pets/org");
 
+        // 社区公开接口：允许未登录用户浏览帖子列表、详情和评论
+        boolean isPublicCommunityPath = path.startsWith("/community") &&
+            (path.equals("/community/posts") || // GET 帖子列表
+             path.matches("^/community/posts/\\d+$") || // GET 帖子详情
+             path.matches("^/community/posts/\\d+/comments$")) && // GET 评论列表
+            "GET".equals(exchange.getRequest().getMethod().name()); // 只允许 GET 请求
+
         if (path.startsWith("/auth/login") ||
             path.startsWith("/auth/register") ||
             path.startsWith("/files/") || // 文件访问无需登录
-            isPublicPetPath) { // 宠物列表和详情无需登录
+            isPublicPetPath || // 宠物列表和详情无需登录
+            isPublicCommunityPath) { // 社区公开接口无需登录
             System.out.println("[网关] 放行无需登录的请求: " + path);
             return chain.filter(exchange);
         }

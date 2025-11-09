@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Badge, App as AntdApp } from "antd";
 import { MessageOutlined } from "@ant-design/icons";
-import Searchbar from "./searchbar/searchbar";
 import Me from "./me/me";
 import api from "../../../api";
 import styles from "./UserLayout.module.css"; // 导入 CSS Module
@@ -61,11 +60,15 @@ export default function UserLayout() {
       return;
     }
     if (key === "community") {
-      message.info("社区功能即将上线，敬请期待！");
+      navigate("/community");
       return;
     }
     if (key === "messages") {
       navigate("/messages");
+      return;
+    }
+    if (key === "posts") {
+      navigate("/community/my-posts");
       return;
     }
     message.info("功能建设中");
@@ -93,7 +96,6 @@ export default function UserLayout() {
             社区
           </div>
         </div>
-        <Searchbar />
         <div className={styles.right}>
           <div
             className={`${styles.menu} ${isMessagesPage ? styles.menuActive : ""} ${unreadCount > 0 ? styles.hasUnread : ""}`}

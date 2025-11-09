@@ -10,6 +10,7 @@ import {
   Space,
   Empty,
   Upload,
+  Select,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import api from "../../../api";
@@ -27,6 +28,8 @@ export default function OrgApplication() {
   const [uploadingNew, setUploadingNew] = useState(false);
   const [uploadingUpdate, setUploadingUpdate] = useState(false);
   const [orgId, setOrgId] = useState(null);
+  const [orgOptions, setOrgOptions] = useState([]);
+  const [orgLoading, setOrgLoading] = useState(false);
 
   const userId = user?.id || user?.userId;
 
@@ -34,8 +37,10 @@ export default function OrgApplication() {
   const fetchUserMemberships = async () => {
     if (!userId) {
       setOrgId(null);
+      setOrgOptions([]);
       return;
     }
+    setOrgLoading(true);
     try {
       const res = await api.org.getUserMemberships(userId);
       if (res?.code === 200) {
@@ -43,25 +48,37 @@ export default function OrgApplication() {
           ? res.data
           : res.data?.list || res.data?.memberships || [];
 
-        // 从机构列表中提取机构ID
-        const firstOrg = list
+        // 映射机构列表
+        const mapped = list
           .map((item) => {
             const org = item.organizationId ? item : item.org || item;
-            return org.orgId || org.organizationId || org.id;
+            const id = org.orgId || org.organizationId || org.id;
+            if (!id) return null;
+            return {
+              label: org.name || `机构 ${id}`,
+              value: id,
+            };
           })
-          .filter(Boolean)[0];
+          .filter(Boolean);
 
-        if (firstOrg) {
-          setOrgId(firstOrg);
+        setOrgOptions(mapped);
+
+        // 如果有机构，默认选择第一个
+        if (mapped.length > 0) {
+          setOrgId((prev) => prev ?? mapped[0].value);
         } else {
           setOrgId(null);
         }
       } else {
+        setOrgOptions([]);
         setOrgId(null);
       }
     } catch (e) {
       console.warn("获取用户机构列表失败", e);
+      setOrgOptions([]);
       setOrgId(null);
+    } finally {
+      setOrgLoading(false);
     }
   };
 
@@ -151,45 +168,93 @@ export default function OrgApplication() {
       </Card>
 
       <Space direction="vertical" style={{ width: "100%" }} size={24}>
-        <Card title="我所在的机构" loading={loadingDetail}>
-          {orgId ? (
-            orgDetail ? (
-              <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Descriptions size="small" column={1} bordered>
-                  <Descriptions.Item label="机构ID">{orgId}</Descriptions.Item>
-                  <Descriptions.Item label="机构名称">
-                    {orgDetail.name || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="地址">
-                    {orgDetail.address || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="联系人">
-                    {orgDetail.contactName || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="联系电话">
-                    {orgDetail.contactPhone || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="资质地址">
-                    {orgDetail.licenseUrl || "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="状态">
-                    {orgDetail.status || "-"}
-                  </Descriptions.Item>
-                </Descriptions>
-                <Upload
-                  beforeUpload={handleLicenseUpload(orgId, setUploadingUpdate)}
-                  showUploadList={false}
-                  accept="image/*"
-                >
-                  <Button icon={<UploadOutlined />} loading={uploadingUpdate}>
-                    更新资质文件
-                  </Button>
-                </Upload>
-                <Text type="secondary">更新后平台将重新校验资质信息。</Text>
-              </Space>
-            ) : (
-              <Empty description="暂无机构详情，请稍后刷新" />
-            )
+        <Card title="我所在的机构" loading={loadingDetail || orgLoading}>
+          {orgOptions.length > 0 ? (
+            <>
+              {/* 如果用户有多个机构，显示机构选择器 */}
+              {orgOptions.length > 1 && (
+                <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                  <div>
+                    <Text strong>选择机构：</Text>
+                    <Select
+                      placeholder="选择机构"
+                      style={{ width: 300, marginLeft: 12 }}
+                      loading={orgLoading}
+                      value={orgId}
+                      onChange={(value) => {
+                        setOrgId(value);
+                      }}
+                      options={orgOptions}
+                    />
+                  </div>
+                </Space>
+              )}
+
+              {/* 如果只有一个机构，显示机构名称 */}
+              {orgOptions.length === 1 && (
+                <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                  <div>
+                    <Text strong>机构：</Text>
+                    <Text style={{ marginLeft: 12 }}>
+                      {orgOptions[0]?.label || "未知机构"}
+                    </Text>
+                  </div>
+                </Space>
+              )}
+
+              {/* 显示机构详情 */}
+              {orgId ? (
+                orgDetail ? (
+                  <Space
+                    direction="vertical"
+                    style={{ width: "100%" }}
+                    size={16}
+                  >
+                    <Descriptions size="small" column={1} bordered>
+                      <Descriptions.Item label="机构ID">
+                        {orgId}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="机构名称">
+                        {orgDetail.name || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="地址">
+                        {orgDetail.address || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="联系人">
+                        {orgDetail.contactName || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="联系电话">
+                        {orgDetail.contactPhone || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="资质地址">
+                        {orgDetail.licenseUrl || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        {orgDetail.status || "-"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                    <Upload
+                      beforeUpload={handleLicenseUpload(
+                        orgId,
+                        setUploadingUpdate
+                      )}
+                      showUploadList={false}
+                      accept="image/*"
+                    >
+                      <Button
+                        icon={<UploadOutlined />}
+                        loading={uploadingUpdate}
+                      >
+                        更新资质文件
+                      </Button>
+                    </Upload>
+                    <Text type="secondary">更新后平台将重新校验资质信息。</Text>
+                  </Space>
+                ) : (
+                  <Empty description="暂无机构详情，请稍后刷新" />
+                )
+              ) : null}
+            </>
           ) : (
             <Text>当前账号尚未关联机构，可通过以下表单提交入驻申请。</Text>
           )}

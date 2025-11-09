@@ -18,9 +18,9 @@ import java.util.Map;
 
 /**
  * 帖子控制器
- * 
+ *
  * 作用：处理帖子相关的HTTP请求
- * 
+ *
  * 主要功能：
  * - 帖子列表查询（支持类型筛选、排序、分页）
  * - 帖子详情查询
@@ -28,7 +28,7 @@ import java.util.Map;
  * - 删除帖子
  * - 我的帖子查询
  * - 文件上传（单个和批量）
- * 
+ *
  * 文件上传功能说明：
  * - 支持图片和视频文件
  * - 单个文件上传：POST /posts/upload
@@ -36,7 +36,7 @@ import java.util.Map;
  * - 上传后返回文件URL，用于帖子发布时存储到mediaUrls字段
  */
 @RestController
-@RequestMapping("/posts")
+@RequestMapping("/community/posts")
 public class PostController {
 
     @Autowired
@@ -113,26 +113,26 @@ public class PostController {
 
     /**
      * 上传文件（单个文件）
-     * 
+     *
      * 接口路径：POST /posts/upload
-     * 
+     *
      * 功能说明：
      * - 上传单个图片或视频文件
      * - 支持的文件类型：图片（jpg、png、gif等）和视频（mp4、avi等）
      * - 文件会被上传到文件服务器，返回可访问的URL
      * - 返回的文件URL用于帖子发布时存储到mediaUrls字段（JSON数组格式）
-     * 
+     *
      * 使用流程：
      * 1. 前端调用此接口上传文件，获取文件URL
      * 2. 将文件URL添加到mediaUrls数组中
      * 3. 发布帖子时，将mediaUrls数组转为JSON字符串存储
-     * 
+     *
      * 技术实现：
      * - 使用MultipartFile接收文件
      * - 通过FileUtils验证文件类型
      * - 通过FileService上传到文件服务器（可能是本地存储或OSS）
      * - 返回文件信息（URL、相对路径、文件名、大小、内容类型）
-     * 
+     *
      * @param file 上传的文件（multipart/form-data格式）
      * @return 包含文件URL、相对路径、文件名、大小、内容类型的响应
      */
@@ -179,25 +179,25 @@ public class PostController {
 
     /**
      * 上传文件（批量上传）
-     * 
+     *
      * 接口路径：POST /posts/upload/batch
-     * 
+     *
      * 功能说明：
      * - 批量上传多个图片或视频文件（最多9个）
      * - 支持混合上传（图片和视频可以一起上传）
      * - 逐个处理文件，部分失败不影响其他文件
      * - 返回成功上传的文件列表和错误信息（如果有）
-     * 
+     *
      * 使用场景：
      * - 发布包含多张图片的帖子
      * - 发布包含图片和视频的帖子
-     * 
+     *
      * 技术实现：
      * - 接收MultipartFile数组
      * - 遍历数组，逐个验证和上传
      * - 收集成功和失败的结果
      * - 如果所有文件都失败，返回错误；否则返回部分成功的结果
-     * 
+     *
      * @param files 上传的文件数组（multipart/form-data格式，字段名为files）
      * @return 包含成功文件列表、成功数量、总数量、错误信息的响应
      */

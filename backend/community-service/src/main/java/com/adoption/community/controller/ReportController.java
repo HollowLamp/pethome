@@ -9,16 +9,17 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 举报控制器
- * 
+ *
  * 作用：处理举报相关的HTTP请求
- * 
+ *
  * 主要功能：
  * - 举报帖子
  * - 举报评论
- * 
+ *
  * 注意：举报后，可以考虑发送通知给客服人员（通过NotificationMessageService）
  */
 @RestController
+@RequestMapping("/community")
 public class ReportController {
 
     @Autowired

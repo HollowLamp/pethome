@@ -10,16 +10,17 @@ import java.util.Map;
 
 /**
  * 互动反应控制器
- * 
+ *
  * 作用：处理点赞等互动行为的HTTP请求
- * 
+ *
  * 主要功能：
  * - 点赞/取消点赞帖子（幂等操作）
  * - 点赞/取消点赞评论（幂等操作）
- * 
+ *
  * 注意：点赞后，可以考虑发送通知给帖子/评论作者（通过NotificationMessageService）
  */
 @RestController
+@RequestMapping("/community")
 public class ReactionController {
 
     @Autowired

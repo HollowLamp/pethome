@@ -11,9 +11,9 @@ import java.util.Map;
 
 /**
  * 管理员控制器
- * 
+ *
  * 作用：处理管理员和客服相关的HTTP请求
- * 
+ *
  * 主要功能：
  * - 客服功能：
  *   * 获取AI标记的违规帖子列表
@@ -22,15 +22,16 @@ import java.util.Map;
  *   * 处理举报
  * - 管理员功能：
  *   * 推荐/取消推荐帖子
- * 
+ *
  * 权限要求：
  * - 客服功能需要CS（客服）角色
  * - 推荐功能需要ADMIN（超级管理员）角色
- * 
+ *
  * 注意：目前权限验证为TODO，需要在网关或拦截器中实现
  */
 
 @RestController
+@RequestMapping("/community")
 public class AdminController {
 
     @Autowired

@@ -4,6 +4,7 @@ import * as org from "./org";
 import * as adoption from "./adoption";
 import * as interview from "./interview";
 import * as notification from "./notification";
+import * as community from "./community";
 
 const api = {
   auth,
@@ -12,7 +13,8 @@ const api = {
   adoption,
   interview,
   notification,
+  community,
 };
 
 export default api;
-export { auth, pets, org, adoption, interview, notification };
+export { auth, pets, org, adoption, interview, notification, community };

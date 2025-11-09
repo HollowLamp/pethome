@@ -1,10 +1,14 @@
 package com.adoption.community.service;
 
 import com.adoption.common.api.ApiResponse;
+import com.adoption.common.util.UserContext;
+import com.adoption.community.feign.AuthServiceClient;
 import com.adoption.community.model.Comment;
 import com.adoption.community.model.Post;
+import com.adoption.community.model.Reaction;
 import com.adoption.community.repository.CommentMapper;
 import com.adoption.community.repository.PostMapper;
+import com.adoption.community.repository.ReactionMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,37 +18,44 @@ import java.util.Map;
 
 /**
  * 评论服务层
- * 
+ *
  * 作用：处理评论相关的业务逻辑
- * 
+ *
  * 主要功能：
  * - 获取评论列表（分页）
  * - 发布评论
  * - 删除评论
- * 
+ *
  * 注意：评论发布后，可以考虑发送通知给帖子作者（通过NotificationMessageService）
  */
 @Service
 public class CommentService {
     private final CommentMapper commentMapper;
     private final PostMapper postMapper;
+    private final ReactionMapper reactionMapper;
     @Autowired
     private final NotificationMessageService notificationMessageService;
+    @Autowired
+    private final AuthServiceClient authServiceClient;
+    @Autowired
+    private UserContext userContext;
 
-    public CommentService(CommentMapper commentMapper, PostMapper postMapper, NotificationMessageService notificationMessageService) {
+    public CommentService(CommentMapper commentMapper, PostMapper postMapper, ReactionMapper reactionMapper, NotificationMessageService notificationMessageService, AuthServiceClient authServiceClient) {
         this.commentMapper = commentMapper;
         this.postMapper = postMapper;
+        this.reactionMapper = reactionMapper;
         this.notificationMessageService = notificationMessageService;
+        this.authServiceClient = authServiceClient;
     }
 
     /**
      * 获取评论列表（分页查询）
-     * 
+     *
      * 功能说明：
      * - 只返回状态为VISIBLE（可见）的评论
      * - 按创建时间正序排列（最早发布的在前）
      * - 支持分页查询
-     * 
+     *
      * @param postId 帖子ID
      * @param page 页码（从1开始，默认1）
      * @param pageSize 每页数量（默认20，最大100）
@@ -70,6 +81,46 @@ public class CommentService {
         List<Comment> comments = commentMapper.findByPostId(postId, offset, pageSize);
         int total = commentMapper.countByPostId(postId);
 
+        // 获取当前用户ID（如果未登录则为null）
+        Long currentUserId = userContext.getCurrentUserId();
+
+        // 为每个评论统计点赞数、是否已点赞，并填充用户信息
+        for (Comment comment : comments) {
+            // 统计点赞数
+            int likeCount = reactionMapper.countByCommentId(comment.getId());
+            comment.setLikeCount(likeCount);
+
+            // 查询当前用户是否已点赞（如果已登录）
+            if (currentUserId != null) {
+                Reaction reaction = reactionMapper.findByUserIdAndCommentId(currentUserId, comment.getId(), "LIKE");
+                comment.setIsLiked(reaction != null);
+            } else {
+                comment.setIsLiked(false);
+            }
+
+            // 填充用户信息（userId、userName、userAvatarUrl）
+            if (comment.getAuthorId() != null) {
+                comment.setUserId(comment.getAuthorId());
+                try {
+                    ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(comment.getAuthorId());
+                    if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                        Map<String, Object> userData = userResponse.getData();
+                        Object usernameObj = userData.get("username");
+                        if (usernameObj != null) {
+                            comment.setUserName(usernameObj.toString());
+                        }
+                        Object avatarUrlObj = userData.get("avatarUrl");
+                        if (avatarUrlObj != null) {
+                            comment.setUserAvatarUrl(avatarUrlObj.toString());
+                        }
+                    }
+                } catch (Exception e) {
+                    // 如果获取用户信息失败，不影响主流程，只记录日志
+                    System.err.println("获取评论作者信息失败，authorId: " + comment.getAuthorId() + ", error: " + e.getMessage());
+                }
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("list", comments);
         result.put("total", total);
@@ -81,14 +132,14 @@ public class CommentService {
 
     /**
      * 发布评论
-     * 
+     *
      * 功能说明：
      * - 验证帖子存在且状态为PUBLISHED
      * - 验证评论内容不能为空
      * - 自动设置帖子ID、作者ID、默认状态为VISIBLE
      * - 插入数据库后返回包含ID的评论对象
      * - 发送通知给帖子作者
-     * 
+     *
      * @param postId 帖子ID
      * @param comment 评论对象（需要包含content字段）
      * @param authorId 评论作者用户ID（从UserContext获取）
@@ -114,26 +165,42 @@ public class CommentService {
         }
 
         commentMapper.insert(comment);
-        
+
         // 发送通知给帖子作者
         try {
+            // 获取评论者用户名
+            String authorName = "用户";
+            try {
+                ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(authorId);
+                if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                    Map<String, Object> userData = userResponse.getData();
+                    Object usernameObj = userData.get("username");
+                    if (usernameObj != null) {
+                        authorName = usernameObj.toString();
+                    }
+                }
+            } catch (Exception e) {
+                // 如果获取用户名失败，使用默认值
+                System.err.println("获取用户名失败: " + e.getMessage());
+            }
+
             notificationMessageService.sendSystemNotification(
                 post.getAuthorId(),
                 "您的帖子有新评论",
-                String.format("用户%s评论了您的帖子《%s》", authorId, post.getTitle())
+                String.format("%s评论了您的帖子《%s》", authorName, post.getTitle())
             );
         } catch (Exception e) {
             System.err.println("发送通知失败: " + e.getMessage());
         }
-        
+
         return ApiResponse.success(comment);
     }
 
     /**
      * 删除自己的评论
-     * 
+     *
      * 注意：只能删除自己发布的评论，通过同时验证id和authorId确保安全性
-     * 
+     *
      * @param id 评论ID
      * @param authorId 作者用户ID（用于验证权限）
      * @return 删除结果

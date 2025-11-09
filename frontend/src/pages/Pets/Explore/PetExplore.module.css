@@ -127,6 +127,18 @@
   font-size: 13px;
 }
 
+.errorTip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 35, 95, 0.08);
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
 @media (max-width: 768px) {
   .page {
     padding: 16px 16px 48px;

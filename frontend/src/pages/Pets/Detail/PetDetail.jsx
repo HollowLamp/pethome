@@ -27,6 +27,7 @@ import {
 import { useParams, useNavigate } from "react-router";
 import api from "../../../api";
 import useAuthStore from "../../../store/authStore";
+import { processImageUrl } from "../../../utils/imageUtils";
 import styles from "./PetDetail.module.css";
 
 const { Title, Text, Paragraph } = Typography;
@@ -451,9 +452,7 @@ export default function PetDetail() {
                         ? new Date(item.createdAt).toLocaleString()
                         : "--";
                       const avatarUrl = item.avatarUrl
-                        ? item.avatarUrl.startsWith("http")
-                          ? item.avatarUrl
-                          : `/files/${item.avatarUrl}`
+                        ? processImageUrl(item.avatarUrl)
                         : null;
                       return (
                         <List.Item>

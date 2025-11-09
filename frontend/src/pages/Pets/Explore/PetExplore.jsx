@@ -22,7 +22,7 @@ import PetCard from "../components/PetCard";
 import styles from "./PetExplore.module.css";
 
 const TYPE_OPTIONS = [
-  { label: "全部", value: undefined },
+  { label: "全部", value: "" },
   { label: "狗狗", value: "DOG" },
   { label: "猫咪", value: "CAT" },
   { label: "兔子", value: "RABBIT" },
@@ -35,7 +35,7 @@ const TYPE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { label: "全部", value: undefined },
+  { label: "全部", value: "" },
   { label: "可领养", value: "AVAILABLE" },
   { label: "已预约", value: "RESERVED" },
 ];
@@ -52,9 +52,10 @@ export default function PetExplore() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [filters, setFilters] = useState({
-    type: undefined,
-    status: undefined,
+    type: "",
+    status: "",
     sort: "recommend",
   });
 
@@ -69,16 +70,24 @@ export default function PetExplore() {
     return `${typeLabel} / ${statusLabel}`;
   }, [filters]);
 
+  // 将空字符串转换为 undefined 用于 API 请求
+  const getApiFilters = () => ({
+    type: filters.type === "" ? undefined : filters.type,
+    status: filters.status === "" ? undefined : filters.status,
+  });
+
   const fetchPets = async ({ pageNo, append = false }) => {
     if (loading || loadingMore) return;
 
     append ? setLoadingMore(true) : setLoading(true);
+    setHasError(false);
     try {
+      const apiFilters = getApiFilters();
       const res = await api.pets.fetchPets({
         page: pageNo,
         pageSize: PAGE_SIZE,
-        type: filters.type,
-        status: filters.status,
+        type: apiFilters.type,
+        status: apiFilters.status,
       });
       if (res?.code === 200) {
         const list = res.data?.list || [];
@@ -86,9 +95,17 @@ export default function PetExplore() {
         const total = res.data?.total ?? 0;
         setHasMore(pageNo * PAGE_SIZE < total);
         setPage(pageNo);
+        setHasError(false);
+      } else {
+        // 如果响应码不是 200，也停止加载更多
+        setHasMore(false);
+        setHasError(true);
       }
     } catch (error) {
       message.error(error?.message || "获取宠物列表失败");
+      // 请求失败时停止加载更多，防止无限请求
+      setHasMore(false);
+      setHasError(true);
     } finally {
       append ? setLoadingMore(false) : setLoading(false);
     }
@@ -96,6 +113,8 @@ export default function PetExplore() {
 
   useEffect(() => {
     setPage(1);
+    setHasMore(true);
+    setHasError(false);
     fetchPets({ pageNo: 1, append: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.type, filters.status]);
@@ -104,7 +123,13 @@ export default function PetExplore() {
     if (!sentinelRef.current) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !loading &&
+          !loadingMore &&
+          !hasError
+        ) {
           fetchPets({ pageNo: page + 1, append: true });
         }
       },
@@ -118,7 +143,7 @@ export default function PetExplore() {
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, hasMore, loading, loadingMore, filters]);
+  }, [page, hasMore, loading, loadingMore, hasError, filters]);
 
   return (
     <div className={styles.page}>
@@ -138,7 +163,12 @@ export default function PetExplore() {
               立即浏览
             </Button>
             {!isLoggedIn && (
-              <Button size="large" onClick={() => navigate("/login")}>
+              <Button
+                size="large"
+                onClick={() =>
+                  window.dispatchEvent(new Event("OPEN_LOGIN_MODAL"))
+                }
+              >
                 登录解锁更多
               </Button>
             )}
@@ -167,8 +197,8 @@ export default function PetExplore() {
             onClick={() =>
               setFilters((prev) => ({
                 ...prev,
-                type: undefined,
-                status: undefined,
+                type: "",
+                status: "",
               }))
             }
           >
@@ -178,18 +208,19 @@ export default function PetExplore() {
         <div className={styles.filterSelectors}>
           <Segmented
             options={TYPE_OPTIONS}
-            value={filters.type}
+            value={filters.type || ""}
             onChange={(value) =>
               setFilters((prev) => ({ ...prev, type: value }))
             }
           />
           <Select
-            value={filters.status}
+            value={filters.status || ""}
             onChange={(value) =>
               setFilters((prev) => ({ ...prev, status: value }))
             }
             options={STATUS_OPTIONS}
             style={{ width: 160 }}
+            allowClear={false}
           />
         </div>
       </Card>
@@ -237,7 +268,22 @@ export default function PetExplore() {
             />
           </div>
         )}
-        {!hasMore && pets.length > 0 && (
+        {hasError && pets.length > 0 && (
+          <div className={styles.errorTip}>
+            <span>加载失败</span>
+            <Button
+              type="link"
+              onClick={() => {
+                setHasError(false);
+                setHasMore(true);
+                fetchPets({ pageNo: page + 1, append: true });
+              }}
+            >
+              点击重试
+            </Button>
+          </div>
+        )}
+        {!hasMore && !hasError && pets.length > 0 && (
           <span className={styles.noMore}>没有更多啦~</span>
         )}
       </div>

@@ -1,0 +1,601 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #fff8f5 0%, #ffffff 400px);
+  padding-bottom: 80px;
+}
+
+.hero {
+  padding: 60px 70px;
+  background: linear-gradient(135deg, #fff4ed 0%, #ffe9dc 100%);
+  border-radius: 0 0 24px 24px;
+  margin-bottom: 32px;
+}
+
+.heroContent {
+  text-align: center;
+}
+
+.heroContent h1 {
+  font-size: 48px;
+  font-weight: 700;
+  color: #5b4337;
+  margin: 0 0 16px 0;
+  background: linear-gradient(135deg, #ff7f5d 0%, #ff9163 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroContent p {
+  font-size: 18px;
+  color: #8b7066;
+  margin: 0 0 32px 0;
+}
+
+.heroButtons {
+  margin-bottom: 24px;
+}
+
+.heroTips {
+  text-align: center;
+  color: #8b7066;
+  font-size: 14px;
+}
+
+/* 推荐区域 */
+.recommendSection {
+  padding: 0 70px;
+  margin-bottom: 48px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.sectionHeader h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #5b4337;
+  margin: 0;
+}
+
+.sectionIcon {
+  font-size: 28px;
+  color: #ff7f5d;
+}
+
+.carouselCard {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(255, 127, 93, 0.15);
+}
+
+.carouselWrapper {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(255, 127, 93, 0.15);
+}
+
+.carousel {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+/* 左右两侧导航区域 */
+.carouselNavLeft,
+.carouselNavRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.1),
+    transparent
+  );
+}
+
+.carouselNavLeft {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.1),
+    transparent
+  );
+}
+
+.carouselNavRight {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.1),
+    transparent
+  );
+}
+
+.carouselNavLeft:hover,
+.carouselNavRight:hover {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.2),
+    transparent
+  );
+}
+
+.carouselNavRight:hover {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.2),
+    transparent
+  );
+}
+
+.carouselNavLeft svg,
+.carouselNavRight svg {
+  font-size: 32px;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.carouselNavLeft:hover svg,
+.carouselNavRight:hover svg {
+  color: #fff;
+  transform: scale(1.2);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+/* 轮播指示器样式 */
+.carousel :global(.slick-dots) {
+  bottom: 20px !important;
+  z-index: 10;
+}
+
+.carousel :global(.slick-dots li button) {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+.carousel :global(.slick-dots li.slick-active button) {
+  background: #ff7f5d !important;
+  width: 24px !important;
+  border-radius: 5px !important;
+}
+
+.carousel :global(.slick-dots li) {
+  margin: 0 4px !important;
+}
+
+.carouselItem {
+  position: relative;
+  height: 400px;
+  display: flex !important;
+  cursor: pointer;
+  background: #fff;
+  overflow: hidden;
+}
+
+.carouselImage {
+  flex: 1;
+  width: 60%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.carouselImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.carouselItem:hover .carouselImage img {
+  transform: scale(1.05);
+}
+
+.carouselContent {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, #fff 0%, #fff9f5 100%);
+}
+
+.carouselTag {
+  align-self: flex-start;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.carouselTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.carouselExcerpt {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.8;
+  margin: 0 0 32px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.carouselFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.carouselAuthor {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.carouselStat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* 筛选卡片 */
+.filterCard {
+  margin: 0 70px 32px 70px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.filterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.filterLabel {
+  font-weight: 600;
+  font-size: 16px;
+  color: #5b4337;
+}
+
+.filterSummary {
+  color: #8b7066;
+  font-size: 14px;
+}
+
+.filterSelectors {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 帖子网格 */
+.postsGrid {
+  padding: 0 70px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* 帖子卡片 - 类似宠物卡片的设计 */
+.postCard {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 35, 95, 0.08);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.postCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 30px rgba(15, 35, 95, 0.15);
+}
+
+.coverWrapper {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fff4ed 0%, #ffe9dc 100%);
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.postCard:hover .cover {
+  transform: scale(1.04);
+}
+
+.recommendBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, #ff7f5d 0%, #ff9163 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(255, 127, 93, 0.3);
+  z-index: 1;
+}
+
+.coverMask {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent 60%);
+  opacity: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20px;
+  transition: opacity 0.2s ease;
+}
+
+.postCard:hover .coverMask {
+  opacity: 1;
+}
+
+.coverAction {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.cardBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.postHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.authorName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.postTime {
+  font-size: 12px;
+  color: #999;
+}
+
+.typeTag {
+  border-radius: 12px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.postTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 44px;
+}
+
+.postExcerpt {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-size: 13px;
+  transition: color 0.2s ease;
+}
+
+.stat:hover {
+  color: #ff7f5d;
+}
+
+/* 骨架屏 */
+.skeletonCard {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(15, 35, 95, 0.08);
+}
+
+/* 加载状态 */
+.sentinel {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.loadingMore {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 35, 95, 0.08);
+}
+
+.errorTip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  color: #ff4d4f;
+  font-size: 14px;
+}
+
+.noMore {
+  color: #999;
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .postsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    padding: 0 48px;
+  }
+
+  .recommendSection {
+    padding: 0 48px;
+  }
+
+  .filterCard {
+    margin: 0 48px 32px 48px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .postsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    padding: 0 24px;
+  }
+
+  .recommendSection {
+    padding: 0 24px;
+  }
+
+  .filterCard {
+    margin: 0 24px 32px 24px;
+  }
+
+  .hero {
+    padding: 40px 24px;
+  }
+
+  .carouselItem {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .carouselImage {
+    width: 100%;
+    height: 300px;
+  }
+
+  .carouselContent {
+    padding: 24px;
+  }
+
+  .carouselTitle {
+    font-size: 22px;
+  }
+
+  /* 移动端缩小导航区域 */
+  .carouselNavLeft,
+  .carouselNavRight {
+    width: 80px;
+  }
+
+  .carouselNavLeft svg,
+  .carouselNavRight svg {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .postsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+
+  .coverWrapper {
+    height: 180px;
+  }
+
+  .cardBody {
+    padding: 12px;
+  }
+
+  .postTitle {
+    font-size: 14px;
+    min-height: 40px;
+  }
+
+  .postExcerpt {
+    font-size: 12px;
+  }
+
+  .heroContent h1 {
+    font-size: 36px;
+  }
+
+  .sectionHeader h2 {
+    font-size: 22px;
+  }
+
+  .sectionIcon {
+    font-size: 22px;
+  }
+}

@@ -19,6 +19,9 @@ import AdoptionReview from "../pages/Admin/AdoptionReview/AdoptionReview";
 import AdoptionConfirm from "../pages/Admin/AdoptionConfirm/AdoptionConfirm";
 import InterviewSchedule from "../pages/Admin/InterviewSchedule/InterviewSchedule";
 import PetOverdueReminder from "../pages/Admin/PetOverdueReminder/PetOverdueReminder";
+import FeaturedContent from "../pages/Admin/FeaturedContent/FeaturedContent";
+import ViolationReview from "../pages/Admin/ViolationReview/ViolationReview";
+import UserAppeals from "../pages/Admin/UserAppeals/UserAppeals";
 import CommunitySettings from "../pages/Settings/CommunitySettings/CommunitySettings";
 import AdoptionProfile from "../pages/Settings/AdoptionProfile/AdoptionProfile";
 import PetExplore from "../pages/Pets/Explore/PetExplore";
@@ -27,6 +30,10 @@ import Wishlist from "../pages/Wishlist/Wishlist";
 import AdoptionRecord from "../pages/AdoptionRecord/AdoptionRecord";
 import UserMessages from "../pages/Messages/UserMessages";
 import OrgMessages from "../pages/Messages/OrgMessages";
+import CommunityExplore from "../pages/Community/Explore/CommunityExplore";
+import PostDetail from "../pages/Community/Detail/PostDetail";
+import CreatePost from "../pages/Community/Create/CreatePost";
+import MyPosts from "../pages/Community/MyPosts/MyPosts";
 
 const routes = createRoutesFromElements(
   <Route path="/">
@@ -36,6 +43,12 @@ const routes = createRoutesFromElements(
       <Route path="wishlist" element={<Wishlist />} />
       <Route path="adoption-record" element={<AdoptionRecord />} />
       <Route path="messages" element={<UserMessages />} />
+      <Route path="community">
+        <Route index element={<CommunityExplore />} />
+        <Route path=":postId" element={<PostDetail />} />
+        <Route path="create" element={<CreatePost />} />
+        <Route path="my-posts" element={<MyPosts />} />
+      </Route>
       <Route path="settings">
         <Route path="community" element={<CommunitySettings />} />
         <Route path="adoption-profile" element={<AdoptionProfile />} />
@@ -56,6 +69,9 @@ const routes = createRoutesFromElements(
       <Route path="interview-schedule" element={<InterviewSchedule />} />
       <Route path="adoption-confirm" element={<AdoptionConfirm />} />
       <Route path="user-reminders" element={<PetOverdueReminder />} />
+      <Route path="featured-content" element={<FeaturedContent />} />
+      <Route path="violation-review" element={<ViolationReview />} />
+      <Route path="user-appeals" element={<UserAppeals />} />
       <Route path="messages" element={<OrgMessages />} />
       {/* 其他admin子路由可以在这里添加 */}
     </Route>

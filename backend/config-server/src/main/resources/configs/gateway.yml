@@ -52,3 +52,9 @@ spring:
             - Path=/notification/**
           filters:
             - StripPrefix=0 # 保留 /notification 前缀
+        - id: community-service
+          uri: lb://community-service
+          predicates:
+            - Path=/community/**
+          filters:
+            - StripPrefix=0 # 保留 /community 前缀

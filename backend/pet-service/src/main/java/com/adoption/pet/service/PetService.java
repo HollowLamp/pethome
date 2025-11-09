@@ -9,8 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class PetService {
@@ -31,6 +33,41 @@ public class PetService {
         int offset = (page - 1) * pageSize;
         List<Pet> pets = petMapper.findAll(type, status, orgId, offset, pageSize);
         int total = petMapper.countAll(type, status, orgId);
+
+        // 填充机构名称
+        if (pets != null && !pets.isEmpty()) {
+            // 收集所有唯一的orgId
+            Set<Long> orgIds = new HashSet<>();
+            for (Pet pet : pets) {
+                if (pet.getOrgId() != null) {
+                    orgIds.add(pet.getOrgId());
+                }
+            }
+
+            // 批量查询机构信息并缓存
+            Map<Long, String> orgNameMap = new HashMap<>();
+            for (Long id : orgIds) {
+                try {
+                    ApiResponse<Map<String, Object>> orgResponse = orgServiceClient.getOrgDetail(id);
+                    if (orgResponse != null && orgResponse.getCode() == 200 && orgResponse.getData() != null) {
+                        Map<String, Object> orgData = orgResponse.getData();
+                        if (orgData.get("name") != null) {
+                            orgNameMap.put(id, orgData.get("name").toString());
+                        }
+                    }
+                } catch (Exception e) {
+                    // 如果调用失败，不影响主流程，只记录日志
+                    log.warn("获取机构信息失败，orgId: {}, error: {}", id, e.getMessage());
+                }
+            }
+
+            // 填充机构名称到宠物对象
+            for (Pet pet : pets) {
+                if (pet.getOrgId() != null && orgNameMap.containsKey(pet.getOrgId())) {
+                    pet.setOrgName(orgNameMap.get(pet.getOrgId()));
+                }
+            }
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", pets);

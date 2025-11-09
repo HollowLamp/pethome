@@ -1,6 +1,7 @@
 package com.adoption.community.service;
 
 import com.adoption.common.api.ApiResponse;
+import com.adoption.community.feign.AuthServiceClient;
 import com.adoption.community.model.Post;
 import com.adoption.community.model.Comment;
 import com.adoption.community.model.Reaction;
@@ -15,18 +16,18 @@ import java.util.Map;
 
 /**
  * 互动反应服务层
- * 
+ *
  * 作用：处理点赞等互动行为的业务逻辑
- * 
+ *
  * 主要功能：
  * - 点赞/取消点赞帖子（幂等操作）
  * - 点赞/取消点赞评论（幂等操作）
- * 
+ *
  * 实现原理：
  * - 通过查询是否存在记录来判断是否已点赞
  * - 如果已点赞则删除记录（取消点赞），否则插入记录（点赞）
  * - 返回当前点赞状态和点赞总数
- * 
+ *
  * 扩展建议：可以在这里调用NotificationMessageService发送点赞通知
  */
 @Service
@@ -36,26 +37,29 @@ public class ReactionService {
     private final CommentMapper commentMapper;
     @Autowired
     private final NotificationMessageService notificationMessageService;
+    @Autowired
+    private final AuthServiceClient authServiceClient;
 
-    public ReactionService(ReactionMapper reactionMapper, PostMapper postMapper, CommentMapper commentMapper, NotificationMessageService notificationMessageService) {
+    public ReactionService(ReactionMapper reactionMapper, PostMapper postMapper, CommentMapper commentMapper, NotificationMessageService notificationMessageService, AuthServiceClient authServiceClient) {
         this.reactionMapper = reactionMapper;
         this.postMapper = postMapper;
         this.commentMapper = commentMapper;
         this.notificationMessageService = notificationMessageService;
+        this.authServiceClient = authServiceClient;
     }
 
     /**
      * 点赞/取消点赞帖子（幂等操作）
-     * 
+     *
      * 功能说明：
      * - 验证帖子存在且状态为PUBLISHED
      * - 如果用户已点赞，则取消点赞（删除记录）
      * - 如果用户未点赞，则点赞（插入记录）
      * - 返回当前点赞状态和点赞总数
      * - 发送点赞通知给帖子作者
-     * 
+     *
      * 幂等性：多次调用相同参数，结果一致
-     * 
+     *
      * @param postId 帖子ID
      * @param userId 操作用户ID
      * @return 包含isLiked（是否已点赞）和likeCount（点赞总数）的响应
@@ -71,7 +75,7 @@ public class ReactionService {
 
         Reaction existing = reactionMapper.findByUserIdAndPostId(userId, postId, "LIKE");
         boolean isLiked;
-        
+
         if (existing != null) {
             // 取消点赞
             reactionMapper.deleteByUserIdAndPostId(userId, postId, "LIKE");
@@ -87,39 +91,55 @@ public class ReactionService {
         }
 
         int likeCount = reactionMapper.countByPostId(postId);
-        
+
         // 只有在点赞时才发送通知（取消点赞不发送通知）
         if (isLiked) {
             try {
+                // 获取点赞者用户名
+                String userName = "用户";
+                try {
+                    ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(userId);
+                    if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                        Map<String, Object> userData = userResponse.getData();
+                        Object usernameObj = userData.get("username");
+                        if (usernameObj != null) {
+                            userName = usernameObj.toString();
+                        }
+                    }
+                } catch (Exception e) {
+                    // 如果获取用户名失败，使用默认值
+                    System.err.println("获取用户名失败: " + e.getMessage());
+                }
+
                 notificationMessageService.sendLikeNotification(
                     post.getAuthorId(),
                     "您的帖子收到新点赞",
-                    String.format("用户%s点赞了您的帖子《%s》", userId, post.getTitle())
+                    String.format("%s点赞了您的帖子《%s》", userName, post.getTitle())
                 );
             } catch (Exception e) {
                 System.err.println("发送通知失败: " + e.getMessage());
             }
         }
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("isLiked", isLiked);
         result.put("likeCount", likeCount);
-        
+
         return ApiResponse.success(result);
     }
 
     /**
      * 点赞/取消点赞评论（幂等操作）
-     * 
+     *
      * 功能说明：
      * - 验证评论存在且状态为VISIBLE
      * - 如果用户已点赞，则取消点赞（删除记录）
      * - 如果用户未点赞，则点赞（插入记录）
      * - 返回当前点赞状态和点赞总数
      * - 发送点赞通知给评论作者
-     * 
+     *
      * 幂等性：多次调用相同参数，结果一致
-     * 
+     *
      * @param commentId 评论ID
      * @param userId 操作用户ID
      * @return 包含isLiked（是否已点赞）和likeCount（点赞总数）的响应
@@ -135,7 +155,7 @@ public class ReactionService {
 
         Reaction existing = reactionMapper.findByUserIdAndCommentId(userId, commentId, "LIKE");
         boolean isLiked;
-        
+
         if (existing != null) {
             // 取消点赞
             reactionMapper.deleteByUserIdAndCommentId(userId, commentId, "LIKE");
@@ -151,24 +171,40 @@ public class ReactionService {
         }
 
         int likeCount = reactionMapper.countByCommentId(commentId);
-        
+
         // 只有在点赞时才发送通知（取消点赞不发送通知）
         if (isLiked) {
             try {
+                // 获取点赞者用户名
+                String userName = "用户";
+                try {
+                    ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(userId);
+                    if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                        Map<String, Object> userData = userResponse.getData();
+                        Object usernameObj = userData.get("username");
+                        if (usernameObj != null) {
+                            userName = usernameObj.toString();
+                        }
+                    }
+                } catch (Exception e) {
+                    // 如果获取用户名失败，使用默认值
+                    System.err.println("获取用户名失败: " + e.getMessage());
+                }
+
                 notificationMessageService.sendLikeNotification(
                     comment.getAuthorId(),
                     "您的评论收到新点赞",
-                    String.format("用户%s点赞了您的评论：%s", userId, comment.getContent().length() > 20 ? comment.getContent().substring(0, 20) + "..." : comment.getContent())
+                    String.format("%s点赞了您的评论：%s", userName, comment.getContent().length() > 20 ? comment.getContent().substring(0, 20) + "..." : comment.getContent())
                 );
             } catch (Exception e) {
                 System.err.println("发送通知失败: " + e.getMessage());
             }
         }
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("isLiked", isLiked);
         result.put("likeCount", likeCount);
-        
+
         return ApiResponse.success(result);
     }
 }

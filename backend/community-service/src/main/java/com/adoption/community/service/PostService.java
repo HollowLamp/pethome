@@ -1,8 +1,13 @@
 package com.adoption.community.service;
 
 import com.adoption.common.api.ApiResponse;
+import com.adoption.common.util.UserContext;
+import com.adoption.community.feign.AuthServiceClient;
 import com.adoption.community.model.Post;
+import com.adoption.community.model.Reaction;
 import com.adoption.community.repository.PostMapper;
+import com.adoption.community.repository.ReactionMapper;
+import com.adoption.community.repository.CommentMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,9 +17,9 @@ import java.util.Map;
 
 /**
  * 帖子服务层
- * 
+ *
  * 作用：处理帖子相关的业务逻辑
- * 
+ *
  * 主要功能：
  * - 帖子列表查询（支持类型筛选、排序、分页）
  * - 帖子详情查询
@@ -28,23 +33,36 @@ import java.util.Map;
 public class PostService {
 
     private final PostMapper postMapper;
+    private final ReactionMapper reactionMapper;
+    private final CommentMapper commentMapper;
     @Autowired
     private final NotificationMessageService notificationMessageService;
+    @Autowired
+    private final AuthServiceClient authServiceClient;
+    @Autowired
+    private UserContext userContext;
 
-    public PostService(PostMapper postMapper, NotificationMessageService notificationMessageService) {
+    public PostService(PostMapper postMapper,
+                      ReactionMapper reactionMapper,
+                      CommentMapper commentMapper,
+                      NotificationMessageService notificationMessageService,
+                      AuthServiceClient authServiceClient) {
         this.postMapper = postMapper;
+        this.reactionMapper = reactionMapper;
+        this.commentMapper = commentMapper;
         this.notificationMessageService = notificationMessageService;
+        this.authServiceClient = authServiceClient;
     }
 
     /**
      * 获取帖子列表（支持类型筛选、排序、分页）
-     * 
+     *
      * 功能说明：
      * - 只返回状态为PUBLISHED（已发布）的帖子
      * - 支持按类型筛选：PET_PUBLISH、DAILY、GUIDE
      * - 支持排序：latest（最新）、popular（最热）
      * - 支持分页查询
-     * 
+     *
      * @param type 帖子类型（可选，null表示不筛选）
      * @param sort 排序方式（latest-最新，popular-最热，null-默认最新）
      * @param page 页码（从1开始，默认1）
@@ -66,10 +84,48 @@ public class PostService {
         List<Post> posts = postMapper.findAll(type, sort, null, offset, pageSize);
         int total = postMapper.countAll(type, null);
 
-        // 为每个帖子添加点赞数（将来可以扩展Post实体添加likeCount字段）
-        // for (Post post : posts) {
-        //     int likeCount = reactionMapper.countByPostId(post.getId());
-        // }
+        // 获取当前用户ID（如果未登录则为null）
+        Long currentUserId = userContext.getCurrentUserId();
+
+        // 为每个帖子统计点赞数、评论数和是否已点赞，并填充作者信息
+        for (Post post : posts) {
+            // 统计点赞数
+            int likeCount = reactionMapper.countByPostId(post.getId());
+            post.setLikeCount(likeCount);
+
+            // 统计评论数
+            int commentCount = commentMapper.countByPostId(post.getId());
+            post.setCommentCount(commentCount);
+
+            // 查询当前用户是否已点赞（如果已登录）
+            if (currentUserId != null) {
+                Reaction reaction = reactionMapper.findByUserIdAndPostId(currentUserId, post.getId(), "LIKE");
+                post.setIsLiked(reaction != null);
+            } else {
+                post.setIsLiked(false);
+            }
+
+            // 填充作者信息
+            if (post.getAuthorId() != null) {
+                try {
+                    ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(post.getAuthorId());
+                    if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                        Map<String, Object> userData = userResponse.getData();
+                        Object usernameObj = userData.get("username");
+                        if (usernameObj != null) {
+                            post.setAuthorName(usernameObj.toString());
+                        }
+                        Object avatarUrlObj = userData.get("avatarUrl");
+                        if (avatarUrlObj != null) {
+                            post.setAuthorAvatarUrl(avatarUrlObj.toString());
+                        }
+                    }
+                } catch (Exception e) {
+                    // 如果获取用户信息失败，不影响主流程，只记录日志
+                    System.err.println("获取帖子作者信息失败，authorId: " + post.getAuthorId() + ", error: " + e.getMessage());
+                }
+            }
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", posts);
@@ -82,9 +138,9 @@ public class PostService {
 
     /**
      * 获取帖子详情
-     * 
+     *
      * 注意：只返回状态为PUBLISHED的帖子，其他状态的帖子返回404
-     * 
+     *
      * @param id 帖子ID
      * @return 帖子详情，如果不存在或未发布则返回错误
      */
@@ -96,21 +152,62 @@ public class PostService {
         if (!"PUBLISHED".equals(post.getStatus())) {
             return ApiResponse.error(404, "帖子不存在或已被删除");
         }
+
+        // 获取当前用户ID（如果未登录则为null）
+        Long currentUserId = userContext.getCurrentUserId();
+
+        // 统计点赞数
+        int likeCount = reactionMapper.countByPostId(post.getId());
+        post.setLikeCount(likeCount);
+
+        // 统计评论数
+        int commentCount = commentMapper.countByPostId(post.getId());
+        post.setCommentCount(commentCount);
+
+        // 查询当前用户是否已点赞（如果已登录）
+        if (currentUserId != null) {
+            Reaction reaction = reactionMapper.findByUserIdAndPostId(currentUserId, post.getId(), "LIKE");
+            post.setIsLiked(reaction != null);
+        } else {
+            post.setIsLiked(false);
+        }
+
+        // 填充作者信息
+        if (post.getAuthorId() != null) {
+            try {
+                ApiResponse<Map<String, Object>> userResponse = authServiceClient.getUserById(post.getAuthorId());
+                if (userResponse != null && userResponse.getCode() == 200 && userResponse.getData() != null) {
+                    Map<String, Object> userData = userResponse.getData();
+                    Object usernameObj = userData.get("username");
+                    if (usernameObj != null) {
+                        post.setAuthorName(usernameObj.toString());
+                    }
+                    Object avatarUrlObj = userData.get("avatarUrl");
+                    if (avatarUrlObj != null) {
+                        post.setAuthorAvatarUrl(avatarUrlObj.toString());
+                    }
+                }
+            } catch (Exception e) {
+                // 如果获取用户信息失败，不影响主流程，只记录日志
+                System.err.println("获取帖子作者信息失败，authorId: " + post.getAuthorId() + ", error: " + e.getMessage());
+            }
+        }
+
         return ApiResponse.success(post);
     }
 
     /**
      * 发布帖子
-     * 
+     *
      * 功能说明：
      * - 验证标题和类型不能为空
      * - 自动设置作者ID、默认状态为PUBLISHED
      * - 自动设置aiFlagged为false、recommend为false
      * - 插入数据库后返回包含ID的帖子对象
      * - 发送通知给关注该用户的粉丝
-     * 
+     *
      * 注意：媒体文件URL需要先通过文件上传接口获取，然后以JSON数组格式存储在mediaUrls字段
-     * 
+     *
      * @param post 帖子对象（需要包含title、type、content等字段）
      * @param authorId 作者用户ID（从UserContext获取）
      * @return 创建成功的帖子对象（包含自动生成的ID）
@@ -140,9 +237,9 @@ public class PostService {
 
     /**
      * 删除自己的帖子
-     * 
+     *
      * 注意：只能删除自己发布的帖子，通过同时验证id和authorId确保安全性
-     * 
+     *
      * @param id 帖子ID
      * @param authorId 作者用户ID（用于验证权限）
      * @return 删除结果
@@ -166,12 +263,12 @@ public class PostService {
 
     /**
      * 获取我发布的帖子（用于"我的帖子"功能）
-     * 
+     *
      * 功能说明：
      * - 查询指定用户发布的所有帖子（包括已发布、已删除等所有状态）
      * - 支持分页查询
      * - 按创建时间倒序排列
-     * 
+     *
      * @param authorId 作者用户ID
      * @param page 页码（从1开始，默认1）
      * @param pageSize 每页数量（默认10，最大100）
@@ -203,14 +300,14 @@ public class PostService {
 
     /**
      * 获取AI标记的违规帖子（客服审核功能）
-     * 
+     *
      * 功能说明：
      * - 查询所有被AI标记为违规的帖子（aiFlagged = true）
      * - 用于客服人员审核和处理违规内容
      * - 支持分页查询
-     * 
+     *
      * 权限要求：需要CS（客服）角色
-     * 
+     *
      * @param page 页码（从1开始，默认1）
      * @param pageSize 每页数量（默认10，最大100）
      * @return 包含违规帖子列表、总数、页码等信息的响应
@@ -241,13 +338,13 @@ public class PostService {
 
     /**
      * 修改帖子状态（客服审核功能）
-     * 
+     *
      * 功能说明：
      * - 用于客服审核违规帖子后修改其状态
      * - 支持的状态：PUBLISHED（恢复发布）、FLAGGED（标记违规）、REMOVED（删除）
-     * 
+     *
      * 权限要求：需要CS（客服）角色
-     * 
+     *
      * @param id 帖子ID
      * @param status 新状态（PUBLISHED、FLAGGED、REMOVED）
      * @return 更新结果
@@ -268,14 +365,14 @@ public class PostService {
 
     /**
      * 推荐/取消推荐帖子（超级管理员功能）
-     * 
+     *
      * 功能说明：
      * - 用于管理员将优质帖子推荐到首页
      * - 如果recommend为null，则切换当前状态（推荐变不推荐，不推荐变推荐）
      * - 如果recommend有值，则设置为指定状态
-     * 
+     *
      * 权限要求：需要ADMIN（超级管理员）角色
-     * 
+     *
      * @param id 帖子ID
      * @param recommend 是否推荐（true-推荐，false-取消推荐，null-切换状态）
      * @return 操作结果

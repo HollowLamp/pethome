@@ -11,17 +11,17 @@ import java.util.Map;
 
 /**
  * 评论控制器
- * 
+ *
  * 作用：处理评论相关的HTTP请求
- * 
+ *
  * 主要功能：
  * - 获取评论列表（分页）
  * - 发布评论
- * 
+ *
  * 注意：评论发布后，可以考虑发送通知给帖子作者（通过NotificationMessageService）
  */
 @RestController
-@RequestMapping("/posts/{id}/comments")
+@RequestMapping("/community/posts/{id}/comments")
 public class CommentController {
 
     @Autowired

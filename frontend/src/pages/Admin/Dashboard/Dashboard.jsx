@@ -48,6 +48,11 @@ export default function Dashboard() {
     // Interview 相关统计数据
     pendingInterviewRequests: 0, // 待安排面谈 - 状态为 REQUESTED
     pendingInterviewRequestsLoading: false,
+    // 社区相关统计数据
+    pendingFlaggedPosts: 0, // 待复核违规内容
+    pendingFlaggedPostsLoading: false,
+    pendingUserAppeals: 0, // 待处理用户申诉
+    pendingUserAppealsLoading: false,
   });
 
   // 获取用户角色
@@ -412,171 +417,223 @@ export default function Dashboard() {
     fetchPendingHandoverApps();
   }, [selectedOrgId, roleSet]);
 
-  const statistics = useMemo(() => {
-    const stats = [];
-
-    // 超级管理员 - 全局数据
-    if (roleSet.has("ADMIN")) {
-      stats.push(
-        {
-          title: "待审核机构",
-          value: statsData.pendingOrgs,
-          icon: <FileTextOutlined />,
-          color: "#1890ff",
-          loading: statsData.pendingOrgsLoading,
-        },
-        {
-          title: "待审核申请",
-          value: statsData.pendingReviewApps,
-          icon: <CheckCircleOutlined />,
-          color: "#52c41a",
-          loading: statsData.pendingReviewAppsLoading,
-        },
-        {
-          title: "待处理申诉",
-          value: 0,
-          icon: <UserOutlined />,
-          color: "#faad14",
-          // TODO: 待开发 - 申诉处理接口
-        },
-        {
-          title: "在线宠物总数",
-          value: statsData.availablePets,
-          icon: <HeartOutlined />,
-          color: "#f5222d",
-          loading: statsData.availablePetsLoading,
-        },
-        {
-          title: "平台用户总数",
-          value: statsData.totalUsers,
-          icon: <TeamOutlined />,
-          color: "#722ed1",
-          loading: statsData.totalUsersLoading,
+  // 获取待复核违规内容（客服）
+  useEffect(() => {
+    if (!roleSet.has("CS")) {
+      setStatsData((prev) => ({ ...prev, pendingFlaggedPosts: 0 }));
+      return;
+    }
+    const fetchPendingFlaggedPosts = async () => {
+      setStatsData((prev) => ({ ...prev, pendingFlaggedPostsLoading: true }));
+      try {
+        const res = await api.community.getFlaggedPosts({
+          page: 1,
+          pageSize: 1,
+        });
+        if (res?.code === 200) {
+          const total = res.data?.total || 0;
+          setStatsData((prev) => ({ ...prev, pendingFlaggedPosts: total }));
         }
-      );
+      } catch (e) {
+        console.warn("获取待复核违规内容失败", e);
+      } finally {
+        setStatsData((prev) => ({
+          ...prev,
+          pendingFlaggedPostsLoading: false,
+        }));
+      }
+    };
+    fetchPendingFlaggedPosts();
+  }, [roleSet]);
+
+  // 获取待处理用户申诉（客服）
+  useEffect(() => {
+    if (!roleSet.has("CS")) {
+      setStatsData((prev) => ({ ...prev, pendingUserAppeals: 0 }));
+      return;
+    }
+    const fetchPendingUserAppeals = async () => {
+      setStatsData((prev) => ({ ...prev, pendingUserAppealsLoading: true }));
+      try {
+        const res = await api.community.getReports({
+          page: 1,
+          pageSize: 1,
+          status: "PENDING",
+        });
+        if (res?.code === 200) {
+          const total = res.data?.total || 0;
+          setStatsData((prev) => ({ ...prev, pendingUserAppeals: total }));
+        }
+      } catch (e) {
+        console.warn("获取待处理用户申诉失败", e);
+      } finally {
+        setStatsData((prev) => ({ ...prev, pendingUserAppealsLoading: false }));
+      }
+    };
+    fetchPendingUserAppeals();
+  }, [roleSet]);
+
+  const statistics = useMemo(() => {
+    // 使用Map来去重，key是title，避免多角色时重复显示
+    const statsMap = new Map();
+
+    // 超级管理员 - 全局数据（优先级最高）
+    if (roleSet.has("ADMIN")) {
+      statsMap.set("待审核机构", {
+        title: "待审核机构",
+        value: statsData.pendingOrgs,
+        icon: <FileTextOutlined />,
+        color: "#1890ff",
+        loading: statsData.pendingOrgsLoading,
+      });
+      statsMap.set("待审核申请", {
+        title: "待审核申请",
+        value: statsData.pendingReviewApps,
+        icon: <CheckCircleOutlined />,
+        color: "#52c41a",
+        loading: statsData.pendingReviewAppsLoading,
+      });
+      statsMap.set("在线宠物总数", {
+        title: "在线宠物总数",
+        value: statsData.availablePets,
+        icon: <HeartOutlined />,
+        color: "#f5222d",
+        loading: statsData.availablePetsLoading,
+      });
+      statsMap.set("平台用户总数", {
+        title: "平台用户总数",
+        value: statsData.totalUsers,
+        icon: <TeamOutlined />,
+        color: "#722ed1",
+        loading: statsData.totalUsersLoading,
+      });
     }
 
-    // 审核员 - 审核相关数据
+    // 审核员 - 审核相关数据（如果已有ADMIN角色，则跳过重复项）
     if (roleSet.has("AUDITOR")) {
-      stats.push(
-        {
+      if (!statsMap.has("待审核机构")) {
+        statsMap.set("待审核机构入驻", {
           title: "待审核机构入驻",
           value: statsData.pendingOrgs,
           icon: <FileTextOutlined />,
           color: "#1890ff",
           loading: statsData.pendingOrgsLoading,
-        },
-        {
+        });
+      }
+      if (!statsMap.has("待审核申请")) {
+        statsMap.set("待审核领养申请（复审）", {
           title: "待审核领养申请（复审）",
           value: statsData.pendingReviewApps,
           icon: <CheckCircleOutlined />,
           color: "#52c41a",
           loading: statsData.pendingReviewAppsLoading,
-        }
-      );
+        });
+      }
     }
 
     // 客服人员 - 客服相关数据
     if (roleSet.has("CS")) {
-      stats.push(
-        {
-          title: "待复核违规内容",
-          value: 0,
-          icon: <WarningOutlined />,
-          color: "#faad14",
-          // TODO: 待开发 - 违规内容复核接口
-        },
-        {
-          title: "待处理用户申诉",
-          value: 0,
-          icon: <UserOutlined />,
-          color: "#f5222d",
-          // TODO: 待开发 - 用户申诉处理接口
-        },
-        {
-          title: "需提醒更新状态",
-          value: 0,
-          icon: <ClockCircleOutlined />,
-          color: "#1890ff",
-          // TODO: 待开发 - 状态更新提醒接口
-        }
-      );
+      statsMap.set("待复核违规内容", {
+        title: "待复核违规内容",
+        value: statsData.pendingFlaggedPosts,
+        icon: <WarningOutlined />,
+        color: "#faad14",
+        loading: statsData.pendingFlaggedPostsLoading,
+      });
+      statsMap.set("待处理用户申诉", {
+        title: "待处理用户申诉",
+        value: statsData.pendingUserAppeals,
+        icon: <UserOutlined />,
+        color: "#f5222d",
+        loading: statsData.pendingUserAppealsLoading,
+      });
+      statsMap.set("需提醒更新状态", {
+        title: "需提醒更新状态",
+        value: 0,
+        icon: <ClockCircleOutlined />,
+        color: "#1890ff",
+        // TODO: 待开发 - 状态更新提醒接口
+      });
     }
 
     // 机构管理员 - 机构相关数据
     if (roleSet.has("ORG_ADMIN")) {
-      stats.push(
-        {
-          title: "待审核用户申请（初审）",
-          value: statsData.pendingAdoptionApps,
-          icon: <CheckCircleOutlined />,
-          color: "#52c41a",
-          loading: statsData.pendingAdoptionAppsLoading,
-        },
-        {
-          title: "待安排面谈",
-          value: statsData.pendingInterviewRequests,
-          icon: <CalendarOutlined />,
-          color: "#1890ff",
-          loading: statsData.pendingInterviewRequestsLoading,
-        },
-        {
-          title: "待确认领养交接",
-          value: statsData.pendingHandoverApps,
-          icon: <FileTextOutlined />,
-          color: "#faad14",
-          loading: statsData.pendingHandoverAppsLoading,
-        },
-        {
-          title: "机构成员总数",
-          value: orgMembersCount,
-          icon: <TeamOutlined />,
-          color: "#1890ff",
-          loading: orgMembersLoading,
-        },
-        {
-          title: "机构宠物总数",
-          value: statsData.orgPetsCount,
-          icon: <HeartOutlined />,
-          color: "#f5222d",
-          loading: statsData.orgPetsLoading,
-        }
-      );
+      statsMap.set("待审核用户申请（初审）", {
+        title: "待审核用户申请（初审）",
+        value: statsData.pendingAdoptionApps,
+        icon: <CheckCircleOutlined />,
+        color: "#52c41a",
+        loading: statsData.pendingAdoptionAppsLoading,
+      });
+      statsMap.set("待安排面谈", {
+        title: "待安排面谈",
+        value: statsData.pendingInterviewRequests,
+        icon: <CalendarOutlined />,
+        color: "#1890ff",
+        loading: statsData.pendingInterviewRequestsLoading,
+      });
+      statsMap.set("待确认领养交接", {
+        title: "待确认领养交接",
+        value: statsData.pendingHandoverApps,
+        icon: <FileTextOutlined />,
+        color: "#faad14",
+        loading: statsData.pendingHandoverAppsLoading,
+      });
+      statsMap.set("机构成员总数", {
+        title: "机构成员总数",
+        value: orgMembersCount,
+        icon: <TeamOutlined />,
+        color: "#1890ff",
+        loading: orgMembersLoading,
+      });
+      statsMap.set("机构宠物总数", {
+        title: "机构宠物总数",
+        value: statsData.orgPetsCount,
+        icon: <HeartOutlined />,
+        color: "#f5222d",
+        loading: statsData.orgPetsLoading,
+      });
     }
 
-    // 宠物信息维护员 - 宠物相关数据
+    // 宠物信息维护员 - 宠物相关数据（如果已有ORG_ADMIN角色，则跳过重复项）
     if (roleSet.has("ORG_STAFF")) {
-      stats.push(
-        {
-          title: "待更新健康信息",
-          value: 0,
-          icon: <MedicineBoxOutlined />,
-          color: "#52c41a",
-          // TODO: 待开发 - 健康信息更新提醒接口
-        },
-        {
-          title: "待归档用户反馈",
-          value: 0,
-          icon: <FileSearchOutlined />,
-          color: "#1890ff",
-          // TODO: 待开发 - 用户反馈归档接口
-        },
-        {
+      statsMap.set("待更新健康信息", {
+        title: "待更新健康信息",
+        value: 0,
+        icon: <MedicineBoxOutlined />,
+        color: "#52c41a",
+        // TODO: 待开发 - 健康信息更新提醒接口
+      });
+      statsMap.set("待归档用户反馈", {
+        title: "待归档用户反馈",
+        value: 0,
+        icon: <FileSearchOutlined />,
+        color: "#1890ff",
+        // TODO: 待开发 - 用户反馈归档接口
+      });
+      // 如果机构管理员已经添加了这些统计项，则不重复添加
+      if (!statsMap.has("机构成员总数")) {
+        statsMap.set("机构成员总数", {
           title: "机构成员总数",
           value: orgMembersCount,
           icon: <TeamOutlined />,
           color: "#1890ff",
           loading: orgMembersLoading,
-        },
-        {
+        });
+      }
+      if (!statsMap.has("机构宠物总数")) {
+        statsMap.set("机构宠物总数", {
           title: "机构宠物总数",
           value: statsData.orgPetsCount,
           icon: <HeartOutlined />,
           color: "#f5222d",
           loading: statsData.orgPetsLoading,
-        }
-      );
+        });
+      }
     }
+
+    // 转换为数组
+    const stats = Array.from(statsMap.values());
 
     // 如果没有匹配的角色，显示默认数据
     if (stats.length === 0) {
