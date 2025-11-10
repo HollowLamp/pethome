@@ -3,3 +3,8 @@ spring:
     name: ai-service
   config:
     import: configserver:http://localhost:8888
+
+# Alibaba DashScope API Key配置
+dashscope:
+  api:
+    key: sk-9d37587db63d469394340d4eee771b9b
