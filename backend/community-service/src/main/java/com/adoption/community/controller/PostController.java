@@ -278,5 +278,48 @@ public class PostController {
             return ApiResponse.error(500, "批量文件上传失败: " + e.getMessage());
         }
     }
+
+    /**
+     * AI 服务回调：更新帖子 AI 标记状态
+     * POST /posts/ai/update-flagged
+     */
+    @PostMapping("/ai/update-flagged")
+    public ApiResponse<String> updatePostAiStatus(@RequestBody Map<String, Object> request) {
+        try {
+            Long postId = Long.valueOf(request.get("postId").toString());
+            Boolean aiFlagged = Boolean.valueOf(request.get("aiFlagged").toString());
+
+            // 更新AI标记状态
+            postService.updatePostAiFlagged(postId, aiFlagged);
+
+            // 如果被标记为违规，更新帖子状态（使用updateStatusOnly，不清除AI标记）
+            if (aiFlagged && request.containsKey("status")) {
+                String status = request.get("status").toString();
+                postService.updatePostStatusOnly(postId, status);
+            }
+
+            return ApiResponse.success("更新成功");
+        } catch (Exception e) {
+            return ApiResponse.error(500, "更新失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * AI 服务回调：更新帖子 AI 总结
+     * POST /posts/ai/update-summary
+     */
+    @PostMapping("/ai/update-summary")
+    public ApiResponse<String> updatePostAiSummary(@RequestBody Map<String, Object> request) {
+        try {
+            Long postId = Long.valueOf(request.get("postId").toString());
+            String aiSummary = (String) request.get("aiSummary");
+
+            postService.updatePostAiSummary(postId, aiSummary);
+
+            return ApiResponse.success("更新成功");
+        } catch (Exception e) {
+            return ApiResponse.error(500, "更新失败: " + e.getMessage());
+        }
+    }
 }
 

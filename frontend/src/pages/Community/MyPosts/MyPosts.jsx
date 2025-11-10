@@ -7,7 +7,6 @@ import {
   Button,
   Space,
   Tag,
-  Avatar,
   Popconfirm,
 } from "antd";
 import {
@@ -17,6 +16,7 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   FireOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router";
 import api from "../../../api";
@@ -86,6 +86,16 @@ export default function MyPosts() {
     return num;
   };
 
+  const getStatusTag = (status) => {
+    const statusMap = {
+      PUBLISHED: { text: "已发布", color: "success" },
+      FLAGGED: { text: "违规", color: "warning" },
+      REMOVED: { text: "已删除", color: "error" },
+    };
+    const config = statusMap[status] || { text: status, color: "default" };
+    return <Tag color={config.color}>{config.text}</Tag>;
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
@@ -142,7 +152,15 @@ export default function MyPosts() {
                   onClick={() => navigate(`/community/${post.id}`)}
                 >
                   <div className={styles.postHeader}>
-                    <Tag color={typeInfo.color}>{typeInfo.label}</Tag>
+                    <Space size={8}>
+                      <Tag color={typeInfo.color}>{typeInfo.label}</Tag>
+                      {getStatusTag(post.status)}
+                      {post.aiFlagged && (
+                        <Tag icon={<WarningOutlined />} color="warning">
+                          AI标记
+                        </Tag>
+                      )}
+                    </Space>
                     <Popconfirm
                       title="确定删除这篇帖子吗？"
                       onConfirm={(e) => {

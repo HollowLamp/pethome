@@ -8,6 +8,8 @@ import com.adoption.community.model.Reaction;
 import com.adoption.community.repository.PostMapper;
 import com.adoption.community.repository.ReactionMapper;
 import com.adoption.community.repository.CommentMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +33,7 @@ import java.util.Map;
  */
 @Service
 public class PostService {
+    private static final Logger log = LoggerFactory.getLogger(PostService.class);
 
     private final PostMapper postMapper;
     private final ReactionMapper reactionMapper;
@@ -40,18 +43,22 @@ public class PostService {
     @Autowired
     private final AuthServiceClient authServiceClient;
     @Autowired
+    private final AiAnalysisMessageService aiAnalysisMessageService;
+    @Autowired
     private UserContext userContext;
 
     public PostService(PostMapper postMapper,
                       ReactionMapper reactionMapper,
                       CommentMapper commentMapper,
                       NotificationMessageService notificationMessageService,
-                      AuthServiceClient authServiceClient) {
+                      AuthServiceClient authServiceClient,
+                      AiAnalysisMessageService aiAnalysisMessageService) {
         this.postMapper = postMapper;
         this.reactionMapper = reactionMapper;
         this.commentMapper = commentMapper;
         this.notificationMessageService = notificationMessageService;
         this.authServiceClient = authServiceClient;
+        this.aiAnalysisMessageService = aiAnalysisMessageService;
     }
 
     /**
@@ -232,7 +239,46 @@ public class PostService {
         }
 
         postMapper.insert(post);
+
+        // 异步触发 AI 分析（不阻塞主流程）
+        try {
+            triggerAiAnalysis(post);
+        } catch (Exception e) {
+            // AI 分析失败不影响帖子发布
+            log.warn("触发 AI 分析失败: postId={}, error={}", post.getId(), e.getMessage());
+        }
+
         return ApiResponse.success(post);
+    }
+
+    /**
+     * 触发 AI 分析（通过 RabbitMQ 异步处理）
+     *
+     * 根据帖子类型触发不同的 AI 分析：
+     * 1. 所有帖子：违规检测（CONTENT_MOD）
+     * 2. 养宠日常（DAILY）：提取宠物健康状态（STATE_EXTRACT）
+     * 3. 养宠攻略（GUIDE）：生成内容总结（SUMMARY）
+     */
+    private void triggerAiAnalysis(Post post) {
+        Long postId = post.getId();
+        String type = post.getType();
+        String title = post.getTitle();
+        String content = post.getContent();
+        Long bindPetId = post.getBindPetId();
+        Long authorId = post.getAuthorId();
+
+        // 1. 所有帖子都进行违规检测（异步）
+        aiAnalysisMessageService.sendContentModerationRequest(postId, title, content, authorId);
+
+        // 2. 养宠日常（DAILY）：提取宠物健康状态（异步）
+        if ("DAILY".equals(type)) {
+            aiAnalysisMessageService.sendStateExtractRequest(postId, content, bindPetId, authorId);
+        }
+
+        // 3. 养宠攻略（GUIDE）：生成内容总结（异步）
+        if ("GUIDE".equals(type)) {
+            aiAnalysisMessageService.sendSummaryRequest(postId, title, content, authorId);
+        }
     }
 
     /**
@@ -342,6 +388,7 @@ public class PostService {
      * 功能说明：
      * - 用于客服审核违规帖子后修改其状态
      * - 支持的状态：PUBLISHED（恢复发布）、FLAGGED（标记违规）、REMOVED（删除）
+     * - 处理完帖子后，自动清除AI标记（aiFlagged = false），因为人工审核已完成
      *
      * 权限要求：需要CS（客服）角色
      *
@@ -359,6 +406,7 @@ public class PostService {
             return ApiResponse.error(400, "无效的状态值");
         }
 
+        // 更新状态并清除AI标记（人工审核已完成）
         postMapper.updateStatus(id, status);
         return ApiResponse.success("状态更新成功");
     }
@@ -389,6 +437,29 @@ public class PostService {
 
         postMapper.updateRecommend(id, recommend);
         return ApiResponse.success(recommend ? "已推荐" : "已取消推荐");
+    }
+
+    /**
+     * 更新帖子 AI 标记状态（AI 服务回调）
+     */
+    public void updatePostAiFlagged(Long postId, Boolean aiFlagged) {
+        postMapper.updateAiFlagged(postId, aiFlagged);
+    }
+
+    /**
+     * 仅更新帖子状态（不清除AI标记）
+     *
+     * 用于AI服务标记违规时，只更新status，保留ai_flagged标记
+     */
+    public void updatePostStatusOnly(Long postId, String status) {
+        postMapper.updateStatusOnly(postId, status);
+    }
+
+    /**
+     * 更新帖子 AI 总结（AI 服务回调）
+     */
+    public void updatePostAiSummary(Long postId, String aiSummary) {
+        postMapper.updateAiSummary(postId, aiSummary);
     }
 }
 
