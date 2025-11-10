@@ -280,7 +280,15 @@ public class AiAnalysisListener {
         // 调用 AI 服务提取状态（容错处理）
         com.adoption.common.api.ApiResponse<Map<String, Object>> response = null;
         try {
-            response = aiService.extractPetState(postId, content);
+            Long bindPetId = null;
+            if (bindPetIdObj != null) {
+                try {
+                    bindPetId = Long.valueOf(bindPetIdObj.toString());
+                } catch (Exception e) {
+                    log.warn("解析bindPetId失败，将使用null: bindPetIdObj={}, error={}", bindPetIdObj, e.getMessage());
+                }
+            }
+            response = aiService.extractPetState(postId, content, bindPetId);
         } catch (Exception e) {
             log.error("AI 状态提取调用失败: postId={}, error={}", postId, e.getMessage(), e);
             return; // AI 调用失败，直接返回
