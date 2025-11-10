@@ -65,10 +65,10 @@ public class AiService {
      */
     public ApiResponse<Boolean> checkContentModeration(Long postId, String title, String content) {
         try {
-            log.info("TODO: 调用 AI 接口进行内容审核 - postId: {}, title: {}", postId, title);
+            log.info("调用 AI 接口进行内容审核 - postId: {}, title: {}", postId, title);
 
             // 模拟 AI 分析结果
-            boolean isFlagged = simulateContentModeration(title, content);
+            boolean isFlagged = aiContentModeration(title, content);
             BigDecimal confidence = new BigDecimal("0.85");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -111,10 +111,10 @@ public class AiService {
      */
     public ApiResponse<String> generateSummary(Long postId, String title, String content) {
         try {
-            log.info("TODO: 调用 AI 接口生成内容总结 - postId: {}, title: {}", postId, title);
+            log.info("调用 AI 接口生成内容总结 - postId: {}, title: {}", postId, title);
 
             // 模拟 AI 生成总结
-            String summary = simulateSummary(title, content);
+            String summary = aiSummary(title, content);
             BigDecimal confidence = new BigDecimal("0.90");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -155,10 +155,10 @@ public class AiService {
      */
     public ApiResponse<Map<String, Object>> extractPetState(Long postId, String content) {
         try {
-            log.info("TODO: 调用 AI 接口提取宠物健康状态 - postId: {}", postId);
+            log.info("调用 AI 接口提取宠物健康状态 - postId: {}", postId);
 
             // 模拟 AI 提取状态
-            Map<String, Object> state = simulateStateExtraction(content);
+            Map<String, Object> state = aiStateExtraction(content);
             BigDecimal confidence = new BigDecimal("0.75");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -187,7 +187,7 @@ public class AiService {
         }
     }
 
-    // ========== 模拟方法（TODO: 替换为真实 AI 调用） ==========
+    // ========== 调用Qwen大模型 ==========
 
     /**
      * 内容审核（调用DashScope Qwen模型）
@@ -196,7 +196,7 @@ public class AiService {
      * @param content 帖子内容
      * @return 是否违规（true-违规，false-正常）
      */
-    private boolean simulateContentModeration(String title, String content) {
+    private boolean aiContentModeration(String title, String content) {
         // 构造提示词
         String prompt = String.format("请对以下内容进行内容审核，判断是否存在违规信息（如广告、色情、暴力、政治敏感等）：\n\n标题：%s\n\n内容：%s\n\n请仅回答\"合规\"或\"违规\"，不要添加其他内容。", 
                 title != null ? title : "", 
@@ -256,7 +256,7 @@ public class AiService {
      * @param content 帖子内容
      * @return 内容总结
      */
-    private String simulateSummary(String title, String content) {
+    private String aiSummary(String title, String content) {
         // 构造提示词
         String prompt = String.format("请为以下内容生成一个简洁的摘要（100字以内）：\n\n标题：%s\n\n内容：%s", 
                 title != null ? title : "", 
@@ -321,7 +321,7 @@ public class AiService {
      * @param content 帖子内容
      * @return 提取的健康状态信息
      */
-    private Map<String, Object> simulateStateExtraction(String content) {
+    private Map<String, Object> aiStateExtraction(String content) {
         // 构造提示词
         String prompt = String.format("请从以下养宠日常内容中提取宠物的健康状态信息，按照指定格式返回JSON：\n\n内容：%s\n\n请严格按照以下JSON格式返回结果，不要添加其他内容：\n{\n  \"weight\": 5.5,\n  \"vaccine\": \"[\\\"狂犬疫苗\\\", \\\"猫三联\\\"]\",\n  \"note\": \"提取的健康状态备注信息\"\n}", 
                 content != null ? content : "");
