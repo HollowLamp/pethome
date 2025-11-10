@@ -68,10 +68,10 @@ public class AiService {
      */
     public ApiResponse<Boolean> checkContentModeration(Long postId, String title, String content) {
         try {
-            log.info("TODO: 调用 AI 接口进行内容审核 - postId: {}, title: {}", postId, title);
+            log.info("调用 AI 接口进行内容审核 - postId: {}, title: {}", postId, title);
 
             // 模拟 AI 分析结果
-            boolean isFlagged = simulateContentModeration(title, content);
+            boolean isFlagged = aiContentModeration(title, content);
             BigDecimal confidence = new BigDecimal("0.85");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -114,10 +114,10 @@ public class AiService {
      */
     public ApiResponse<String> generateSummary(Long postId, String title, String content) {
         try {
-            log.info("TODO: 调用 AI 接口生成内容总结 - postId: {}, title: {}", postId, title);
+            log.info("调用 AI 接口生成内容总结 - postId: {}, title: {}", postId, title);
 
             // 模拟 AI 生成总结
-            String summary = simulateSummary(title, content);
+            String summary = aiSummary(title, content);
             BigDecimal confidence = new BigDecimal("0.90");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -159,10 +159,10 @@ public class AiService {
      */
     public ApiResponse<Map<String, Object>> extractPetState(Long postId, String content, Long bindPetId) {
         try {
-            log.info("TODO: 调用 AI 接口提取宠物健康状态 - postId: {}, bindPetId: {}", postId, bindPetId);
+            log.info("调用 AI 接口提取宠物健康状态 - postId: {}, bindPetId: {}", postId, bindPetId);
 
             // 模拟 AI 提取状态
-            Map<String, Object> state = simulateStateExtraction(postId, content, bindPetId);
+            Map<String, Object> state = aiStateExtraction(postId, content, bindPetId);
             BigDecimal confidence = new BigDecimal("0.75");
 
             // 保存任务记录（容错处理：数据库保存失败不影响返回结果）
@@ -191,7 +191,7 @@ public class AiService {
         }
     }
 
-    // ========== 模拟方法（TODO: 替换为真实 AI 调用） ==========
+    // ========== 调用Qwen大模型 ==========
 
     /**
      * 内容审核（调用DashScope Qwen模型）
@@ -200,7 +200,7 @@ public class AiService {
      * @param content 帖子内容
      * @return 是否违规（true-违规，false-正常）
      */
-    private boolean simulateContentModeration(String title, String content) {
+    private boolean aiContentModeration(String title, String content) {
         // 构造提示词
         String prompt = String.format("请对以下内容进行内容审核，判断是否存在违规信息（如广告、色情、暴力、政治敏感等）：\n\n标题：%s\n\n内容：%s\n\n请仅回答\"合规\"或\"违规\"，不要添加其他内容。",
                 title != null ? title : "",
@@ -260,7 +260,7 @@ public class AiService {
      * @param content 帖子内容
      * @return 内容总结
      */
-    private String simulateSummary(String title, String content) {
+    private String aiSummary(String title, String content) {
         // 构造提示词
         String prompt = String.format("请为以下内容生成一个简洁的摘要（100字以内）：\n\n标题：%s\n\n内容：%s",
                 title != null ? title : "",
@@ -327,7 +327,7 @@ public class AiService {
      * @param bindPetId 绑定的宠物ID（可选，用于回退时查询旧值）
      * @return 提取的健康状态信息
      */
-    private Map<String, Object> simulateStateExtraction(Long postId, String content, Long bindPetId) {
+    private Map<String, Object> aiStateExtraction(Long postId, String content, Long bindPetId) {
         // 构造提示词（不包含具体示例值，避免AI直接复制）
         String prompt = String.format("请从以下养宠日常内容中提取宠物的健康状态信息，按照指定格式返回JSON：\n\n内容：%s\n\n请严格按照以下JSON格式返回结果，不要添加其他内容：\n{\n  \"weight\": <数字或null>,\n  \"vaccine\": \"<JSON字符串数组或空字符串>\",\n  \"note\": \"<备注信息或空字符串>\"\n}\n\n重要说明：\n- weight: 体重数值（单位：kg），如果内容中未明确提及体重则必须返回null\n- vaccine: 疫苗信息的JSON字符串数组，如果内容中未明确提及疫苗则必须返回空字符串\"\"\n- note: 仅包含从内容中实际提取的具体健康状态信息（如症状、行为、饮食等），如果内容中没有任何健康相关信息则必须返回空字符串\"\"\n- 禁止在note中使用描述性语句（如\"未提及\"、\"无信息\"等），只能是实际提取的内容或空字符串",
                 content != null ? content : "");
